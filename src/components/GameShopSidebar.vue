@@ -188,6 +188,21 @@ function hours(minutes) {
   color: #000 !important;
 }
 
+.shop button.secondary {
+  border: 2px dashed var(--gold) !important;
+  background: transparent !important;
+  color: var(--gold) !important;
+}
+
+.shop button.secondary:hover {
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+button:hover {
+  cursor: pointer;
+}
+
 .shop .tags span {
   background-color: var(--gold) !important;
   color: #000 !important;
