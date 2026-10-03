@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import GameCard from './components/GameCard.vue'
-import GameDetails from './components/GameDetails.vue'
+import GameShopSidebar from './components/GameShopSidebar.vue'
 import { useGamepad } from './composables/useGamepad.js'
 import { useLibrary } from './composables/useLibrary.js'
 
@@ -14,14 +14,16 @@ const {
   filter,
   query,
   sources,
+  shopDetails,
+  shopLoading,
   loadLibrary,
+  loadShopDetails,
   actOnGame,
 } = useLibrary()
 
 const selectedIndex = ref(0)
-const detailsOpen = ref(false)
 const busy = ref(false)
-const gridColumns = ref(4)
+const gridColumns = ref(3)
 
 const selectedGame = computed(
   () => filteredGames.value[selectedIndex.value] || filteredGames.value[0] || null,
@@ -30,8 +32,8 @@ const selectedGame = computed(
 function measureColumns() {
   const width = window.innerWidth
   if (width < 640) gridColumns.value = 1
-  else if (width < 900) gridColumns.value = 2
-  else if (width < 1200) gridColumns.value = 3
+  else if (width < 980) gridColumns.value = 2
+  else if (width < 1400) gridColumns.value = 3
   else gridColumns.value = 4
 }
 
@@ -52,9 +54,9 @@ async function scrollSelectedIntoView() {
     ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
 }
 
-async function openDetails() {
-  if (!selectedGame.value) return
-  detailsOpen.value = true
+function selectGame(index) {
+  selectedIndex.value = index
+  scrollSelectedIntoView()
 }
 
 async function launchSelected() {
@@ -81,21 +83,12 @@ const { connected, hint } = useGamepad({
   itemCount: () => filteredGames.value.length,
   columns: () => gridColumns.value,
   selectedIndex: () => selectedIndex.value,
-  detailsOpen: () => detailsOpen.value,
-  onMove: (index) => {
-    selectedIndex.value = index
-    scrollSelectedIntoView()
-  },
-  onConfirm: () => {
-    if (detailsOpen.value) launchSelected()
-    else launchSelected()
-  },
-  onBack: () => {
-    detailsOpen.value = false
-  },
+  detailsOpen: () => false,
+  onMove: (index) => selectGame(index),
+  onConfirm: () => launchSelected(),
+  onBack: () => {},
   onSecondary: () => {
-    if (detailsOpen.value) detailsOpen.value = false
-    else openDetails()
+    document.querySelector('.shop')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   },
   onInstall: () => installSelected(),
 })
@@ -103,6 +96,14 @@ const { connected, hint } = useGamepad({
 watch([filter, query, filteredGames], () => {
   ensureSelection()
 })
+
+watch(
+  selectedGame,
+  (game) => {
+    loadShopDetails(game)
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   measureColumns()
@@ -136,11 +137,7 @@ onMounted(async () => {
 
     <section class="toolbar">
       <div class="filters" role="tablist" aria-label="Library filters">
-        <button
-          type="button"
-          :class="{ active: filter === 'all' }"
-          @click="filter = 'all'"
-        >
+        <button type="button" :class="{ active: filter === 'all' }" @click="filter = 'all'">
           All
         </button>
         <button
@@ -182,29 +179,31 @@ onMounted(async () => {
       </template>
     </p>
 
-    <main>
-      <div v-if="!loading && !filteredGames.length" class="empty">
-        No games match this filter.
-      </div>
+    <div class="workspace">
+      <main>
+        <div v-if="!loading && !filteredGames.length" class="empty">
+          No games match this filter.
+        </div>
 
-      <div class="grid" :style="{ '--cols': gridColumns }">
-        <GameCard
-          v-for="(game, index) in filteredGames"
-          :key="game.id"
-          :game="game"
-          :active="index === selectedIndex"
-          @select="selectedIndex = index; openDetails()"
-        />
-      </div>
-    </main>
+        <div class="grid" :style="{ '--cols': gridColumns }">
+          <GameCard
+            v-for="(game, index) in filteredGames"
+            :key="game.id"
+            :game="game"
+            :active="index === selectedIndex"
+            @select="selectGame(index)"
+          />
+        </div>
+      </main>
 
-    <GameDetails
-      v-if="detailsOpen && selectedGame"
-      :game="selectedGame"
-      :busy="busy"
-      @close="detailsOpen = false"
-      @launch="launchSelected"
-      @install="installSelected"
-    />
+      <GameShopSidebar
+        :game="selectedGame"
+        :details="shopDetails"
+        :loading="shopLoading"
+        :busy="busy"
+        @launch="launchSelected"
+        @install="installSelected"
+      />
+    </div>
   </div>
 </template>

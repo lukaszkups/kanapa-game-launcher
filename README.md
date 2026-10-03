@@ -19,9 +19,10 @@ Open [http://localhost:5173](http://localhost:5173).
 | --- | --- | --- |
 | Move | D-pad / left stick | Arrow keys |
 | Launch | A | Enter |
-| Details | X | `D` |
+| Focus shop sidebar | X | `D` |
 | Install | Y | `I` |
-| Back | B | Esc |
+
+Selecting a game loads a shop-style sidebar (screenshots, description, genres) from Steam’s store API or Heroic’s local GOG/Epic caches.
 
 ## Steam full library
 

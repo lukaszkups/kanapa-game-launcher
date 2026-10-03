@@ -36,8 +36,8 @@ export function useGamepad({
   function setConnected(isConnected) {
     connected.value = isConnected
     hint.value = isConnected
-      ? 'A launch · X details · Y install · B back · D-pad / stick move'
-      : 'Arrow keys move · Enter launch · D details · I install · Esc back'
+      ? 'A launch · X shop panel · Y install · D-pad / stick move'
+      : 'Arrow keys move · Enter launch · D shop panel · I install'
   }
 
   function pressed(buttons, index) {

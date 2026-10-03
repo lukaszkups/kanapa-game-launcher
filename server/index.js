@@ -2,9 +2,9 @@ import cors from 'cors'
 import express from 'express'
 import fs from 'node:fs'
 import path from 'node:path'
-import { getHeroicGames } from './heroic.js'
+import { getGameDetails } from './details.js'
 import { launchGame } from './launch.js'
-import { getInstalledSteamGames, getOwnedSteamGames } from './steam.js'
+import { collectLibrary } from './library.js'
 
 function loadEnvFile() {
   const envPath = path.join(process.cwd(), '.env')
@@ -35,101 +35,6 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-const DEMO_GAMES = [
-  {
-    id: 'demo:hadal',
-    appId: 'hadal',
-    title: 'Hadal Station',
-    store: 'demo',
-    runner: 'demo',
-    installed: true,
-    cover: '',
-    hero: '',
-    header: '',
-    developer: 'Gamepad Library',
-    description:
-      'Demo entry used when no Steam or Heroic libraries are detected. Launch is simulated.',
-    playtimeForever: 120,
-    lastPlayed: null,
-    launchTarget: 'hadal',
-    canInstall: false,
-    canLaunch: true,
-    source: 'demo',
-  },
-  {
-    id: 'demo:orbit',
-    appId: 'orbit',
-    title: 'Orbit Courier',
-    store: 'demo',
-    runner: 'demo',
-    installed: false,
-    cover: '',
-    hero: '',
-    header: '',
-    developer: 'Gamepad Library',
-    description: 'Another demo title so you can try filters and gamepad navigation.',
-    playtimeForever: 0,
-    lastPlayed: null,
-    launchTarget: 'orbit',
-    canInstall: true,
-    canLaunch: false,
-    source: 'demo',
-  },
-]
-
-async function collectLibrary() {
-  const steamInstalled = getInstalledSteamGames()
-  let steamOwned = { games: [], configured: false, error: null }
-
-  try {
-    steamOwned = await getOwnedSteamGames()
-  } catch (error) {
-    steamOwned = { games: [], configured: true, error: error.message }
-  }
-
-  const heroic = getHeroicGames()
-  const steamGames = steamOwned.configured ? steamOwned.games : steamInstalled.games
-  const games = [...steamGames, ...heroic.games].sort((a, b) => {
-    if (a.installed !== b.installed) return a.installed ? -1 : 1
-    return a.title.localeCompare(b.title)
-  })
-
-  if (!games.length) {
-    return {
-      games: DEMO_GAMES,
-      sources: {
-        steam: {
-          mode: 'demo',
-          installedCount: 0,
-          ownedConfigured: steamOwned.configured,
-          error: steamOwned.error,
-        },
-        heroic: { available: heroic.available, count: 0 },
-        demo: true,
-      },
-    }
-  }
-
-  return {
-    games,
-    sources: {
-      steam: {
-        mode: steamOwned.configured ? 'api+local' : 'local-installed',
-        installedCount: steamInstalled.games.length,
-        ownedConfigured: steamOwned.configured,
-        error: steamOwned.error,
-        roots: steamInstalled.roots,
-      },
-      heroic: {
-        available: heroic.available,
-        count: heroic.games.length,
-        root: heroic.root,
-      },
-      demo: false,
-    },
-  }
-}
-
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
@@ -140,6 +45,20 @@ app.get('/api/library', async (_req, res) => {
     res.json(library)
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to load library' })
+  }
+})
+
+app.get('/api/games/:id/details', async (req, res) => {
+  try {
+    const id = decodeURIComponent(req.params.id)
+    const details = await getGameDetails(id)
+    if (!details) {
+      res.status(404).json({ error: 'Game not found' })
+      return
+    }
+    res.json(details)
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to load shop details' })
   }
 })
 

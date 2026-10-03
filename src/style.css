@@ -41,7 +41,25 @@ input {
   position: relative;
   min-height: 100vh;
   padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
-  overflow: hidden;
+  padding-right: calc(380px + 2.5rem);
+  overflow-x: hidden;
+}
+
+.workspace {
+  display: block;
+}
+
+@media (max-width: 980px) {
+  .shell {
+    padding-right: calc(340px + 1.75rem);
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    padding-right: clamp(1rem, 3vw, 2.5rem);
+    padding-bottom: calc(70vh + 1.5rem);
+  }
 }
 
 .atmosphere {

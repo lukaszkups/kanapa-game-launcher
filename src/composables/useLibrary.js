@@ -7,6 +7,9 @@ const error = ref('')
 const notice = ref('')
 const filter = ref('all')
 const query = ref('')
+const shopDetails = ref(null)
+const shopLoading = ref(false)
+let shopRequestId = 0
 
 export function useLibrary() {
   const stores = computed(() => {
@@ -53,6 +56,32 @@ export function useLibrary() {
     }
   }
 
+  async function loadShopDetails(game) {
+    const requestId = ++shopRequestId
+    if (!game) {
+      shopDetails.value = null
+      shopLoading.value = false
+      return
+    }
+
+    shopLoading.value = true
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(game.id)}/details`)
+      const payload = await response.json()
+      if (requestId !== shopRequestId) return
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to load shop details')
+      }
+      shopDetails.value = payload
+    } catch (err) {
+      if (requestId !== shopRequestId) return
+      shopDetails.value = null
+      error.value = err.message || 'Failed to load shop details'
+    } finally {
+      if (requestId === shopRequestId) shopLoading.value = false
+    }
+  }
+
   async function actOnGame(game, action = 'launch') {
     notice.value = ''
     try {
@@ -83,7 +112,10 @@ export function useLibrary() {
     query,
     stores,
     filteredGames,
+    shopDetails,
+    shopLoading,
     loadLibrary,
+    loadShopDetails,
     actOnGame,
   }
 }

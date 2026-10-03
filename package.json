@@ -15,6 +15,7 @@
     "concurrently": "^10.0.5",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "marked": "^18.0.14",
     "vue": "^3.5.42"
   },
   "devDependencies": {
