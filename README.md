@@ -1,4 +1,4 @@
-# Gamepad Library
+# Kanapa Game Launcher
 
 Local Vue + Vite couch UI for your Steam and Heroic (Epic / GOG / Amazon) games.
 
@@ -15,12 +15,12 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ## Controls
 
-| Action | Gamepad | Keyboard |
-| --- | --- | --- |
-| Move | D-pad / left stick | Arrow keys |
-| Launch | A | Enter |
-| Focus shop sidebar | X | `D` |
-| Install | Y | `I` |
+| Action             | Gamepad            | Keyboard   |
+| ------------------ | ------------------ | ---------- |
+| Move               | D-pad / left stick | Arrow keys |
+| Launch             | A                  | Enter      |
+| Focus shop sidebar | X                  | `D`        |
+| Install            | Y                  | `I`        |
 
 Selecting a game loads a shop-style sidebar (screenshots, description, genres) from Steam’s store API or Heroic’s local GOG/Epic caches.
 

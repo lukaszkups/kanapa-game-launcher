@@ -12,7 +12,7 @@ const DEMO_GAMES = [
     cover: '',
     hero: '',
     header: '',
-    developer: 'Gamepad Library',
+    developer: 'lukaszkups',
     description:
       'Demo entry used when no Steam or Heroic libraries are detected. Launch is simulated.',
     playtimeForever: 120,
@@ -32,7 +32,7 @@ const DEMO_GAMES = [
     cover: '',
     hero: '',
     header: '',
-    developer: 'Gamepad Library',
+    developer: 'lukaszkups',
     description: 'Another demo title so you can try filters and gamepad navigation.',
     playtimeForever: 0,
     lastPlayed: null,

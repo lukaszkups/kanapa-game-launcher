@@ -9,13 +9,13 @@ defineEmits(['select'])
 function coverStyle(game) {
   if (game.cover) {
     return {
-      backgroundImage: `linear-gradient(180deg, transparent 45%, rgba(8, 12, 16, 0.92)), url(${game.cover})`,
+      backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(18, 18, 18, 0.92)), url(${game.cover})`,
     }
   }
 
   return {
     backgroundImage:
-      'linear-gradient(145deg, rgba(34, 163, 158, 0.35), rgba(8, 12, 16, 0.95)), radial-gradient(circle at 20% 20%, rgba(242, 169, 59, 0.28), transparent 45%)',
+      'linear-gradient(145deg, rgba(236, 189, 41, 0.35), rgba(18, 18, 18, 0.95)), radial-gradient(circle at 20% 20%, rgba(55, 59, 68, 0.45), transparent 45%)',
   }
 }
 </script>
@@ -44,12 +44,12 @@ function coverStyle(game) {
   justify-content: flex-end;
   min-height: 240px;
   padding: 1rem;
-  border: 1px solid rgba(232, 236, 239, 0.08);
-  border-radius: 18px;
-  background-color: #12181d;
+  border: 1px solid #e2e2e2;
+  border-radius: 0;
+  background-color: #121212;
   background-size: cover;
   background-position: center;
-  color: #eef3f5;
+  color: #fff;
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -63,14 +63,14 @@ function coverStyle(game) {
 
 .card:hover,
 .card.active {
-  transform: translateY(-4px) scale(1.015);
-  border-color: rgba(54, 214, 196, 0.7);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  box-shadow: 0 8px 24px rgba(18, 18, 18, 0.12);
 }
 
 .card.active {
-  outline: 2px solid #36d6c4;
-  outline-offset: 3px;
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
 }
 
 .store {
@@ -78,12 +78,12 @@ function coverStyle(game) {
   top: 0.85rem;
   left: 0.85rem;
   padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(8, 12, 16, 0.72);
-  color: #9ef0e4;
+  background: var(--black);
+  color: var(--gold);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  transform: skew(-10deg);
 }
 
 .meta {
@@ -92,18 +92,20 @@ function coverStyle(game) {
 }
 
 .title {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 1px;
+  line-height: 1.1;
 }
 
 .status {
-  color: rgba(238, 243, 245, 0.72);
+  color: rgba(255, 255, 255, 0.78);
   font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .installed .status {
-  color: #f2a93b;
+  color: var(--gold);
 }
 </style>

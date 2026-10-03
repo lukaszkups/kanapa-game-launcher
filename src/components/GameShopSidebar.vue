@@ -1,50 +1,51 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { renderMarkdown } from '../utils/markdown.js'
+import { computed, ref, watch } from "vue";
+import { renderMarkdown } from "../utils/markdown.js";
 
 const props = defineProps({
   game: { type: Object, default: null },
   details: { type: Object, default: null },
   loading: { type: Boolean, default: false },
   busy: { type: Boolean, default: false },
-})
+});
 
-defineEmits(['launch', 'install'])
+defineEmits(["launch", "install"]);
 
-const activeShot = ref(0)
+const activeShot = ref(0);
 
-const shop = computed(() => props.details || props.game)
-const screenshots = computed(() => shop.value?.screenshots || [])
+const shop = computed(() => props.details || props.game);
+const screenshots = computed(() => shop.value?.screenshots || []);
 const activeImage = computed(() => {
-  const shots = screenshots.value
+  const shots = screenshots.value;
   if (shots.length) {
-    const shot = shots[Math.min(activeShot.value, shots.length - 1)]
-    return shot.full || shot.thumbnail
+    const shot = shots[Math.min(activeShot.value, shots.length - 1)];
+    return shot.full || shot.thumbnail;
   }
-  return shop.value?.hero || shop.value?.header || shop.value?.cover || ''
-})
+  return shop.value?.hero || shop.value?.header || shop.value?.cover || "";
+});
 
 const descriptionHtml = computed(() => {
-  if (props.loading && !props.details) return renderMarkdown('Loading shop details…')
-  return renderMarkdown(shop.value?.description || 'No description available.')
-})
+  if (props.loading && !props.details)
+    return renderMarkdown("Loading shop details…");
+  return renderMarkdown(shop.value?.description || "No description available.");
+});
 
 const longDescriptionHtml = computed(() => {
-  const longText = props.details?.longDescription || ''
-  if (!longText || longText === shop.value?.description) return ''
-  return renderMarkdown(longText)
-})
+  const longText = props.details?.longDescription || "";
+  if (!longText || longText === shop.value?.description) return "";
+  return renderMarkdown(longText);
+});
 
 watch(
   () => props.game?.id,
   () => {
-    activeShot.value = 0
+    activeShot.value = 0;
   },
-)
+);
 
 function hours(minutes) {
-  if (!minutes) return '—'
-  return `${(minutes / 60).toFixed(1)} h`
+  if (!minutes) return "—";
+  return `${(minutes / 60).toFixed(1)} h`;
 }
 </script>
 
@@ -57,9 +58,7 @@ function hours(minutes) {
         <div
           class="hero"
           :style="
-            activeImage
-              ? { backgroundImage: `url(${activeImage})` }
-              : undefined
+            activeImage ? { backgroundImage: `url(${activeImage})` } : undefined
           "
         ></div>
         <div v-if="screenshots.length > 1" class="thumbs">
@@ -85,18 +84,26 @@ function hours(minutes) {
         </p>
 
         <div class="tags" v-if="shop.genres?.length || shop.releaseDate">
-          <span v-for="genre in shop.genres?.slice(0, 4) || []" :key="genre">{{ genre }}</span>
-          <span v-if="shop.releaseDate" class="muted">{{ shop.releaseDate }}</span>
+          <span v-for="genre in shop.genres?.slice(0, 4) || []" :key="genre">{{
+            genre
+          }}</span>
+          <span v-if="shop.releaseDate" class="muted">{{
+            shop.releaseDate
+          }}</span>
         </div>
 
         <div class="description markdown" v-html="descriptionHtml"></div>
 
-        <div v-if="longDescriptionHtml" class="long markdown" v-html="longDescriptionHtml"></div>
+        <div
+          v-if="longDescriptionHtml"
+          class="long markdown"
+          v-html="longDescriptionHtml"
+        ></div>
 
         <dl class="meta">
           <div>
             <dt>Status</dt>
-            <dd>{{ shop.installed ? 'Installed' : 'Not installed' }}</dd>
+            <dd>{{ shop.installed ? "Installed" : "Not installed" }}</dd>
           </div>
           <div>
             <dt>Playtime</dt>
@@ -152,54 +159,74 @@ function hours(minutes) {
 <style scoped>
 .shop {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
-  bottom: 1rem;
+  top: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  width: min(380px, calc(100vw - 2rem));
-  border: 1px solid rgba(238, 243, 245, 0.1);
-  border-radius: 24px;
-  background: rgba(10, 15, 19, 0.94);
-  backdrop-filter: blur(12px);
+  width: min(380px, calc(100vw - 1.5rem));
+  border: 1px solid var(--black);
+  border-radius: 0;
+  background: #111;
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  box-shadow: 8px 8px 0 rgba(18, 18, 18, 0.12);
   animation: slide-in 220ms ease;
+}
+
+.shop * {
+  color: var(--gold) !important;
+}
+
+.shop h2,
+.shop a {
+  color: #fff !important;
+}
+
+.shop button.primary {
+  background-color: var(--gold) !important;
+  color: #000 !important;
+}
+
+.shop .tags span {
+  background-color: var(--gold) !important;
+  color: #000 !important;
 }
 
 .empty {
   margin: auto;
   padding: 2rem;
-  color: rgba(238, 243, 245, 0.6);
+  color: var(--blue);
   text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .media {
   position: relative;
   flex: 0 0 auto;
+  border-bottom: 1px solid var(--black);
 }
 
 .media.loading .hero {
-  filter: saturate(0.7);
+  filter: grayscale(0.35);
 }
 
 .hero {
-  min-height: 220px;
+  min-height: 210px;
   background:
-    radial-gradient(circle at 20% 20%, rgba(54, 214, 196, 0.22), transparent 40%),
-    linear-gradient(135deg, #152028, #0b1217);
+    linear-gradient(135deg, rgba(236, 189, 41, 0.35), rgba(28, 32, 41, 0.9)),
+    var(--blue-dark);
   background-size: cover;
   background-position: center;
 }
 
 .thumbs {
   display: flex;
-  gap: 0.45rem;
-  padding: 0.65rem 0.85rem;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
   overflow-x: auto;
-  background: linear-gradient(180deg, rgba(8, 12, 16, 0.2), rgba(8, 12, 16, 0.85));
+  background: var(--black);
 }
 
 .thumb {
@@ -207,50 +234,54 @@ function hours(minutes) {
   width: 72px;
   height: 42px;
   border: 1px solid transparent;
-  border-radius: 8px;
-  background-color: #12181d;
+  border-radius: 0;
+  background-color: #1c2029;
   background-size: cover;
   background-position: center;
   cursor: pointer;
 }
 
 .thumb.active {
-  border-color: #36d6c4;
-  box-shadow: 0 0 0 1px rgba(54, 214, 196, 0.35);
+  border-color: var(--gold);
+  box-shadow: 3px 3px 0 var(--gold);
 }
 
 .body {
   display: grid;
   gap: 0.75rem;
-  padding: 1rem 1.15rem 1.25rem;
+  padding: 1rem 1.1rem 1.2rem;
   overflow: auto;
+  color: var(--black);
 }
 
 .store {
   margin: 0;
-  color: #9ef0e4;
+  color: var(--blue);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
 h2 {
   margin: 0;
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(1.5rem, 2vw, 2rem);
-  line-height: 1.1;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(1.8rem, 2.4vw, 2.4rem);
+  letter-spacing: 1px;
+  line-height: 1;
+  text-decoration: underline double var(--gold);
 }
 
 .byline,
 .description,
 .long {
   margin: 0;
-  color: rgba(238, 243, 245, 0.78);
+  color: var(--blue-dark);
   line-height: 1.5;
 }
 
 .long {
-  color: rgba(238, 243, 245, 0.62);
+  color: var(--blue);
   font-size: 0.92rem;
 }
 
@@ -278,10 +309,12 @@ h2 {
 .markdown :deep(h2),
 .markdown :deep(h3),
 .markdown :deep(h4) {
-  font-family: 'Syne', sans-serif;
-  font-size: 1rem;
-  line-height: 1.25;
-  color: #eef3f5;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
+  line-height: 1.2;
+  color: var(--black);
+  text-decoration: underline double var(--gold);
 }
 
 .markdown :deep(ul),
@@ -294,32 +327,35 @@ h2 {
 }
 
 .markdown :deep(a) {
-  color: #9ef0e4;
+  color: var(--black);
+  text-decoration-color: var(--gold);
 }
 
 .markdown :deep(code) {
   padding: 0.1rem 0.35rem;
-  border-radius: 6px;
-  background: rgba(238, 243, 245, 0.08);
-  font-size: 0.9em;
+  background: var(--blue-dark);
+  color: #fff;
+  font-size: 0.85em;
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .tags span {
-  padding: 0.25rem 0.55rem;
-  border: 1px solid rgba(238, 243, 245, 0.12);
-  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--black);
+  background: var(--white-alt);
   font-size: 0.75rem;
-  color: rgba(238, 243, 245, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .tags .muted {
-  color: rgba(238, 243, 245, 0.55);
+  background: #fff;
+  color: var(--blue);
 }
 
 .meta {
@@ -331,25 +367,28 @@ h2 {
 
 .meta div {
   padding-top: 0.55rem;
-  border-top: 1px solid rgba(238, 243, 245, 0.1);
+  border-top: 1px solid var(--gray);
 }
 
 dt {
-  color: rgba(238, 243, 245, 0.5);
+  color: var(--blue);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
 dd {
   margin: 0.2rem 0 0;
-  font-family: 'Syne', sans-serif;
+  font-family: "Bebas Neue", sans-serif;
+  letter-spacing: 1px;
+  font-size: 1.1rem;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.5rem;
   align-items: center;
   margin-top: 0.25rem;
 }
@@ -357,29 +396,43 @@ dd {
 .primary,
 .secondary,
 .link {
-  padding: 0.75rem 1.05rem;
-  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  border-radius: 0;
   font-weight: 700;
   text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .primary {
-  border: 0;
-  background: #36d6c4;
-  color: #07201d;
+  border: 1px solid var(--black);
+  background: var(--gold);
+  color: var(--black);
+  transform: skew(-8deg);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--black);
+  color: var(--gold);
 }
 
 .secondary {
-  border: 1px solid rgba(238, 243, 245, 0.28);
-  background: transparent;
-  color: #eef3f5;
+  border: 1px solid var(--black);
+  background: #fff;
+  color: var(--black);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--black);
+  color: #fff;
 }
 
 .link {
   border: 0;
-  color: #9ef0e4;
+  color: var(--black);
   background: transparent;
-  padding-left: 0.35rem;
+  text-decoration: underline double var(--gold);
+  padding-left: 0.2rem;
 }
 
 .primary:disabled,
@@ -402,9 +455,6 @@ dd {
 @media (max-width: 980px) {
   .shop {
     width: min(340px, calc(100vw - 1.25rem));
-    top: 0.75rem;
-    right: 0.75rem;
-    bottom: 0.75rem;
   }
 }
 </style>

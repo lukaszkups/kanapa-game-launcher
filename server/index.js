@@ -109,5 +109,5 @@ app.post('/api/launch', async (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Gamepad Library bridge listening on http://localhost:${PORT}`)
+  console.log(`Kanapa Game Launcher bridge listening on http://localhost:${PORT}`)
 })
