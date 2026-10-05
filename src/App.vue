@@ -1,6 +1,7 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import FloatingParticles from "./components/FloatingParticles.vue";
+import ActionGlyph from "./components/ActionGlyph.vue";
 import GameCard from "./components/GameCard.vue";
 import GameShopSidebar from "./components/GameShopSidebar.vue";
 import { useGamepad } from "./composables/useGamepad.js";
@@ -18,6 +19,8 @@ const {
   shopDetails,
   shopLoading,
   loadLibrary,
+  refreshGame,
+  refreshGameUntil,
   loadShopDetails,
   actOnGame,
 } = useLibrary();
@@ -25,7 +28,23 @@ const {
 const selectedIndex = ref(0);
 const busy = ref(false);
 const gridColumns = ref(3);
+const shopRef = ref(null);
+const pendingActionById = ref({});
+const showBackToTop = ref(false);
 
+const pendingAction = computed(() => {
+  const id = selectedGame.value?.id;
+  if (!id) return "";
+  return pendingActionById.value[id] || "";
+});
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function onWindowScroll() {
+  showBackToTop.value = window.scrollY > 420;
+}
 const codeRain = ref("");
 
 const selectedGame = computed(
@@ -69,13 +88,11 @@ function ensureSelection() {
 
 async function scrollSelectedIntoView() {
   await nextTick();
-  document
-    .querySelector(".card.active")
-    ?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-      behavior: "smooth",
-    });
+  document.querySelector(".card.active")?.scrollIntoView({
+    block: "nearest",
+    inline: "nearest",
+    behavior: "smooth",
+  });
 }
 
 function selectGame(index) {
@@ -94,13 +111,104 @@ async function launchSelected() {
 }
 
 async function installSelected() {
-  if (!selectedGame.value?.canInstall || busy.value) return;
+  if (busy.value) return;
+  if (!selectedGame.value) return;
+  if (!selectedGame.value.canInstall) {
+    notice.value = `${selectedGame.value.title} is already installed`;
+    return;
+  }
+  const gameId = selectedGame.value.id;
+  pendingActionById.value = {
+    ...pendingActionById.value,
+    [gameId]: "install",
+  };
+  notice.value = `Started install for ${selectedGame.value.title}`;
   busy.value = true;
   try {
-    await actOnGame(selectedGame.value, "install");
+    const payload = await actOnGame(selectedGame.value, "install");
+    notice.value =
+      payload?.message || `Started install for ${selectedGame.value.title}`;
+  } catch {
+    const next = { ...pendingActionById.value };
+    delete next[gameId];
+    pendingActionById.value = next;
   } finally {
     busy.value = false;
   }
+  // Patch only this entry as install finishes — keep scroll/selection.
+  void refreshGameUntil(gameId, (game) => game.installed, {
+    attempts: 12,
+    delayMs: 2000,
+  }).then((updated) => {
+    if (updated?.installed) {
+      const next = { ...pendingActionById.value };
+      delete next[gameId];
+      pendingActionById.value = next;
+      notice.value = `${updated.title} is installed`;
+    }
+  });
+}
+
+async function uninstallSelected() {
+  if (busy.value) return;
+  if (!selectedGame.value) return;
+  if (!selectedGame.value.canUninstall) {
+    notice.value = `${selectedGame.value.title} cannot be uninstalled from here`;
+    return;
+  }
+  const gameId = selectedGame.value.id;
+  pendingActionById.value = {
+    ...pendingActionById.value,
+    [gameId]: "uninstall",
+  };
+  notice.value = `Started uninstall for ${selectedGame.value.title}`;
+  busy.value = true;
+  try {
+    const payload = await actOnGame(selectedGame.value, "uninstall");
+    notice.value =
+      payload?.message || `Started uninstall for ${selectedGame.value.title}`;
+  } catch {
+    const next = { ...pendingActionById.value };
+    delete next[gameId];
+    pendingActionById.value = next;
+  } finally {
+    busy.value = false;
+  }
+  void refreshGameUntil(gameId, (game) => !game.installed, {
+    attempts: 10,
+    delayMs: 1500,
+  }).then((updated) => {
+    if (updated && !updated.installed) {
+      const next = { ...pendingActionById.value };
+      delete next[gameId];
+      pendingActionById.value = next;
+      notice.value = `${updated.title} was uninstalled`;
+    }
+  });
+}
+
+async function installOrUninstallSelected() {
+  if (selectedGame.value?.installed) {
+    await uninstallSelected();
+  } else {
+    await installSelected();
+  }
+}
+
+const filterTabs = computed(() => [
+  "all",
+  "installed",
+  ...stores.value.map((store) => store.id),
+]);
+
+function cycleFilter(delta) {
+  const tabs = filterTabs.value;
+  if (!tabs.length) return;
+  const current = Math.max(0, tabs.indexOf(filter.value));
+  const next = (current + delta + tabs.length) % tabs.length;
+  filter.value = tabs[next];
+  selectedIndex.value = 0;
+  scrollSelectedIntoView();
 }
 
 const { connected, hint } = useGamepad({
@@ -116,7 +224,12 @@ const { connected, hint } = useGamepad({
       .querySelector(".shop")
       ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   },
-  onInstall: () => installSelected(),
+  onInstall: () => installOrUninstallSelected(),
+  onFilterPrev: () => cycleFilter(-1),
+  onFilterNext: () => cycleFilter(1),
+  onScreenshot: (delta) => shopRef.value?.cycleScreenshot(delta),
+  onShopScroll: (deltaY) => shopRef.value?.scrollBody(deltaY),
+  onShopThumbsScroll: (deltaX) => shopRef.value?.scrollThumbs(deltaX),
 });
 
 watch([filter, query, filteredGames], () => {
@@ -135,8 +248,15 @@ onMounted(async () => {
   buildCodeRain();
   measureColumns();
   window.addEventListener("resize", measureColumns);
+  window.addEventListener("scroll", onWindowScroll, { passive: true });
+  onWindowScroll();
   await loadLibrary();
   ensureSelection();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", measureColumns);
+  window.removeEventListener("scroll", onWindowScroll);
 });
 </script>
 
@@ -151,7 +271,7 @@ onMounted(async () => {
         rel="noreferrer"
       >
         <span class="logo" aria-hidden="true"></span>
-        <span class="logo-text">Kanapa Game Launcherrary</span>
+        <span class="logo-text">Kanapa Game Launcher</span>
       </a>
       <div class="topbar-meta">
         <span class="status" :class="{ on: connected }">
@@ -178,6 +298,9 @@ onMounted(async () => {
     <div class="content">
       <section class="toolbar">
         <div class="filters" role="tablist" aria-label="Library filters">
+          <span class="filter-glyph start" aria-hidden="true">
+            <ActionGlyph pad="LB" key-label="[" :connected="connected" />
+          </span>
           <button
             type="button"
             :class="{ active: filter === 'all' }"
@@ -202,6 +325,9 @@ onMounted(async () => {
             {{ store.id }}
             <span>{{ store.count }}</span>
           </button>
+          <span class="filter-glyph end" aria-hidden="true">
+            <ActionGlyph pad="RB" key-label="]" :connected="connected" />
+          </span>
         </div>
 
         <label class="search">
@@ -221,6 +347,9 @@ onMounted(async () => {
         Steam: {{ sources.steam.mode }}
         <template v-if="sources.heroic.available">
           · Heroic: {{ sources.heroic.count }} titles
+        </template>
+        <template v-if="sources.prism?.available">
+          · Prism: {{ sources.prism.count }} instances
         </template>
         <template v-if="!sources.steam.ownedConfigured">
           · add STEAM_API_KEY and STEAM_ID for the full Steam library
@@ -245,14 +374,30 @@ onMounted(async () => {
         </main>
 
         <GameShopSidebar
+          ref="shopRef"
           :game="selectedGame"
           :details="shopDetails"
           :loading="shopLoading"
           :busy="busy"
+          :notice="notice"
+          :pending-action="pendingAction"
+          :connected="connected"
           @launch="launchSelected"
           @install="installSelected"
+          @uninstall="uninstallSelected"
         />
       </div>
     </div>
+
+    <button
+      type="button"
+      class="back-to-top has-glyph"
+      :class="{ visible: showBackToTop }"
+      aria-label="Back to top"
+      @click="scrollToTop"
+    >
+      <ActionGlyph pad="↑" key-label="↑" :connected="connected" />
+      <span>Back to top</span>
+    </button>
   </div>
 </template>

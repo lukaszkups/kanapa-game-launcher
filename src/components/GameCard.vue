@@ -1,22 +1,67 @@
 <script setup>
-defineProps({
+import { onMounted, ref, watch } from "vue";
+
+const props = defineProps({
   game: { type: Object, required: true },
   active: { type: Boolean, default: false },
-})
+});
 
-defineEmits(['select'])
+defineEmits(["select"]);
 
-function coverStyle(game) {
-  if (game.cover) {
-    return {
-      backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(18, 18, 18, 0.92)), url(${game.cover})`,
+const coverUrl = ref("");
+
+function candidatesFor(game) {
+  return [
+    game?.cover,
+    ...(game?.coverFallbacks || []),
+    game?.header,
+    game?.hero,
+  ].filter(Boolean);
+}
+
+function probeCover(game) {
+  const queue = [...new Set(candidatesFor(game))];
+  if (!queue.length) {
+    coverUrl.value = "";
+    return;
+  }
+
+  let index = 0;
+  const tryNext = () => {
+    if (index >= queue.length) {
+      coverUrl.value = "";
+      return;
     }
+    const url = queue[index++];
+    const img = new Image();
+    img.onload = () => {
+      coverUrl.value = url;
+    };
+    img.onerror = () => tryNext();
+    img.src = url;
+  };
+  tryNext();
+}
+
+watch(
+  () => props.game?.id,
+  () => probeCover(props.game),
+  { immediate: true },
+);
+
+onMounted(() => probeCover(props.game));
+
+function coverStyle() {
+  if (coverUrl.value) {
+    return {
+      backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(18, 18, 18, 0.92)), url("${coverUrl.value}")`,
+    };
   }
 
   return {
     backgroundImage:
-      'linear-gradient(145deg, rgba(236, 189, 41, 0.35), rgba(18, 18, 18, 0.95)), radial-gradient(circle at 20% 20%, rgba(55, 59, 68, 0.45), transparent 45%)',
-  }
+      "linear-gradient(145deg, rgba(236, 189, 41, 0.35), rgba(18, 18, 18, 0.95)), radial-gradient(circle at 20% 20%, rgba(55, 59, 68, 0.45), transparent 45%)",
+  };
 }
 </script>
 
@@ -25,13 +70,15 @@ function coverStyle(game) {
     class="card"
     type="button"
     :class="{ active, installed: game.installed }"
-    :style="coverStyle(game)"
+    :style="coverStyle()"
     @click="$emit('select')"
   >
     <span class="store">{{ game.store }}</span>
     <span class="meta">
       <span class="title">{{ game.title }}</span>
-      <span class="status">{{ game.installed ? 'Installed' : 'Not installed' }}</span>
+      <span class="status">{{
+        game.installed ? "Installed" : "Not installed"
+      }}</span>
     </span>
   </button>
 </template>
@@ -92,7 +139,7 @@ function coverStyle(game) {
 }
 
 .title {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: "Bebas Neue", sans-serif;
   font-size: 1.35rem;
   letter-spacing: 1px;
   line-height: 1.1;

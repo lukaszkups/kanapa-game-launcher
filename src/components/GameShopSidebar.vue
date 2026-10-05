@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
+import ActionGlyph from "./ActionGlyph.vue";
 import { renderMarkdown } from "../utils/markdown.js";
 
 const props = defineProps({
@@ -7,13 +8,42 @@ const props = defineProps({
   details: { type: Object, default: null },
   loading: { type: Boolean, default: false },
   busy: { type: Boolean, default: false },
+  notice: { type: String, default: "" },
+  pendingAction: { type: String, default: "" }, // 'install' | 'uninstall' | ''
+  connected: { type: Boolean, default: false },
 });
 
-defineEmits(["launch", "install"]);
+defineEmits(["launch", "install", "uninstall"]);
 
 const activeShot = ref(0);
+const bodyRef = ref(null);
+const thumbsRef = ref(null);
 
-const shop = computed(() => props.details || props.game);
+const shop = computed(() => ({
+  ...(props.game || {}),
+  ...(props.details || {}),
+  // Action flags must come from the library entry, not enriched shop details.
+  canInstall: Boolean(props.game?.canInstall),
+  canLaunch: Boolean(props.game?.canLaunch),
+  canUninstall: Boolean(props.game?.canUninstall),
+  installed: Boolean(props.game?.installed),
+}));
+
+const statusLabel = computed(() => {
+  if (props.pendingAction === "install") return "Installing…";
+  if (props.pendingAction === "uninstall") return "Uninstalling…";
+  return shop.value.installed ? "Installed" : "Not installed";
+});
+
+const actionNotice = computed(() => {
+  if (props.pendingAction === "install") {
+    return props.notice || "Started install";
+  }
+  if (props.pendingAction === "uninstall") {
+    return props.notice || "Started uninstall";
+  }
+  return "";
+});
 const screenshots = computed(() => shop.value?.screenshots || []);
 const activeImage = computed(() => {
   const shots = screenshots.value;
@@ -47,6 +77,34 @@ function hours(minutes) {
   if (!minutes) return "—";
   return `${(minutes / 60).toFixed(1)} h`;
 }
+
+async function cycleScreenshot(delta) {
+  const count = screenshots.value.length;
+  if (!count) return;
+  activeShot.value = (activeShot.value + delta + count) % count;
+  await nextTick();
+  thumbsRef.value?.querySelector(".thumb.active")?.scrollIntoView({
+    inline: "nearest",
+    block: "nearest",
+    behavior: "smooth",
+  });
+}
+
+function scrollBody(deltaY) {
+  if (!bodyRef.value || !deltaY) return;
+  bodyRef.value.scrollTop += deltaY;
+}
+
+function scrollThumbs(deltaX) {
+  if (!thumbsRef.value || !deltaX) return;
+  thumbsRef.value.scrollLeft += deltaX;
+}
+
+defineExpose({
+  cycleScreenshot,
+  scrollBody,
+  scrollThumbs,
+});
 </script>
 
 <template>
@@ -61,7 +119,7 @@ function hours(minutes) {
             activeImage ? { backgroundImage: `url(${activeImage})` } : undefined
           "
         ></div>
-        <div v-if="screenshots.length > 1" class="thumbs">
+        <div v-if="screenshots.length > 1" ref="thumbsRef" class="thumbs">
           <button
             v-for="(shot, index) in screenshots.slice(0, 8)"
             :key="shot.id || index"
@@ -75,7 +133,7 @@ function hours(minutes) {
         </div>
       </div>
 
-      <div class="body">
+      <div ref="bodyRef" class="body">
         <p class="store">{{ shop.store }} shop</p>
         <h2>{{ shop.title }}</h2>
         <p v-if="shop.developer || shop.publisher" class="byline">
@@ -103,7 +161,7 @@ function hours(minutes) {
         <dl class="meta">
           <div>
             <dt>Status</dt>
-            <dd>{{ shop.installed ? "Installed" : "Not installed" }}</dd>
+            <dd :class="{ pending: pendingAction }">{{ statusLabel }}</dd>
           </div>
           <div>
             <dt>Playtime</dt>
@@ -115,22 +173,44 @@ function hours(minutes) {
           </div>
         </dl>
 
+        <p
+          v-if="actionNotice"
+          class="action-notice"
+          :class="{ pending: pendingAction }"
+        >
+          {{ actionNotice }}
+        </p>
+
         <div class="actions">
           <button
-            class="primary"
+            class="primary has-glyph"
             type="button"
-            :disabled="busy || !shop.canLaunch"
+            :disabled="busy || !!pendingAction || !shop.canLaunch"
             @click="$emit('launch')"
           >
+            <ActionGlyph pad="A" key-label="⏎" :connected="connected" />
             Launch
           </button>
           <button
-            class="secondary"
+            class="secondary has-glyph"
             type="button"
-            :disabled="busy || !shop.canInstall"
-            @click="$emit('install')"
+            :disabled="
+              busy ||
+              !!pendingAction ||
+              (shop.installed ? !shop.canUninstall : !shop.canInstall)
+            "
+            @click="shop.installed ? $emit('uninstall') : $emit('install')"
           >
-            Install
+            <ActionGlyph pad="Y" key-label="I" :connected="connected" />
+            {{
+              pendingAction === "install"
+                ? "Installing…"
+                : pendingAction === "uninstall"
+                  ? "Uninstalling…"
+                  : shop.installed
+                    ? "Uninstall"
+                    : "Install"
+            }}
           </button>
           <a
             v-if="shop.storeUrl"
@@ -186,6 +266,17 @@ function hours(minutes) {
 .shop button.primary {
   background-color: var(--gold) !important;
   color: #000 !important;
+}
+
+.shop button.primary :deep(.glyph),
+.shop button.secondary :deep(.glyph) {
+  color: #fff !important;
+  border-color: #fff;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.shop button.primary.has-glyph :deep(.glyph) {
+  transform: skew(8deg);
 }
 
 .shop button.secondary {
@@ -265,7 +356,10 @@ button:hover {
   display: grid;
   gap: 0.75rem;
   padding: 1rem 1.1rem 1.2rem;
-  overflow: auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--black);
 }
 
@@ -285,6 +379,9 @@ h2 {
   letter-spacing: 1px;
   line-height: 1;
   text-decoration: underline double var(--gold);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .byline,
@@ -293,6 +390,10 @@ h2 {
   margin: 0;
   color: var(--blue-dark);
   line-height: 1.5;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .long {
@@ -306,8 +407,26 @@ h2 {
 .markdown :deep(h1),
 .markdown :deep(h2),
 .markdown :deep(h3),
-.markdown :deep(h4) {
+.markdown :deep(h4),
+.markdown :deep(pre),
+.markdown :deep(blockquote),
+.markdown :deep(table) {
   margin: 0 0 0.65rem;
+  max-width: 100%;
+}
+
+.markdown :deep(img),
+.markdown :deep(video) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown :deep(pre),
+.markdown :deep(code) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown :deep(p:last-child),
@@ -400,6 +519,24 @@ dd {
   font-size: 1.1rem;
 }
 
+dd.pending {
+  color: var(--gold);
+}
+
+.action-notice {
+  margin: 0.35rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(236, 189, 41, 0.45);
+  background: rgba(236, 189, 41, 0.12);
+  color: #1a1a1a;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.action-notice.pending {
+  border-color: rgba(236, 189, 41, 0.7);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -411,12 +548,17 @@ dd {
 .primary,
 .secondary,
 .link {
-  padding: 0.7rem 1rem;
+  position: relative;
+  padding: 0.7rem 1.35rem 0.7rem 1rem;
   border-radius: 0;
   font-weight: 700;
   text-decoration: none;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.has-glyph {
+  padding-right: 1.55rem;
 }
 
 .primary {

@@ -51,7 +51,8 @@ a {
   min-height: 100vh;
   padding: 0 0 3rem;
   padding-right: calc(var(--sidebar-width) + 1.5rem);
-  overflow-x: hidden;
+  /* clip avoids creating a scroll container that breaks position: sticky */
+  overflow-x: clip;
   background: transparent;
 }
 
@@ -269,18 +270,44 @@ a {
 }
 
 .toolbar {
+  position: sticky;
+  top: 48px;
+  z-index: 35;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0;
+  background: var(--blue-dark);
+  border-bottom: 1px solid rgba(236, 189, 41, 0.18);
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  align-items: center;
+}
+
+.filter-glyph {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+}
+
+.filter-glyph :deep(.glyph) {
+  position: static;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  background: rgba(18, 18, 18, 0.9);
+  border-color: var(--gold);
+  color: var(--gold) !important;
 }
 
 .filters button {
@@ -423,4 +450,51 @@ a {
     padding-top: 0.65rem;
     padding-bottom: 0.65rem;
   }
+
+  .toolbar {
+    top: 4.5rem;
+  }
+}
+
+.back-to-top {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 45;
+  padding: 0.7rem 1.5rem 0.7rem 1rem;
+  border: 1px solid var(--black);
+  background: var(--gold);
+  color: var(--black);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: skew(-8deg);
+  box-shadow: 4px 4px 0 rgba(18, 18, 18, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.back-to-top.has-glyph :deep(.glyph) {
+  transform: skew(8deg);
+  background: rgba(0, 0, 0, 0.85);
+  border-color: #fff;
+  color: #fff !important;
+}
+
+.back-to-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.back-to-top:hover {
+  transform: skew(-8deg) translateY(-2px);
+}
+
+.back-to-top span {
+  display: inline-block;
+  transform: skew(8deg);
 }

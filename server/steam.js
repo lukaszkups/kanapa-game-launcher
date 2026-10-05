@@ -91,6 +91,63 @@ function libraryPathsFromVdf(vdfPath) {
   return [...paths]
 }
 
+function steamCdnAsset(appId, file) {
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/${file}`
+}
+
+export function resolveSteamLibraryAssetPath(appId, file) {
+  const id = String(appId)
+  const candidates = []
+  for (const root of candidateSteamRoots()) {
+    const cacheDir = path.join(root, 'appcache', 'librarycache')
+    candidates.push(path.join(cacheDir, id, file))
+    candidates.push(path.join(cacheDir, `${id}_${file}`))
+    candidates.push(path.join(cacheDir, file))
+  }
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+function steamAssetUrl(appId, file) {
+  if (resolveSteamLibraryAssetPath(appId, file)) {
+    return `/api/assets/steam/${encodeURIComponent(appId)}/${encodeURIComponent(file)}`
+  }
+  return steamCdnAsset(appId, file)
+}
+
+function steamCoverUrls(appId) {
+  const preferred = ['library_600x900.jpg', 'portrait.png', 'header.jpg', 'capsule_616x353.jpg']
+  const cover =
+    preferred
+      .map((file) => {
+        if (resolveSteamLibraryAssetPath(appId, file)) {
+          return `/api/assets/steam/${encodeURIComponent(appId)}/${encodeURIComponent(file)}`
+        }
+        return null
+      })
+      .find(Boolean) || steamCdnAsset(appId, 'library_600x900.jpg')
+
+  const fallbacks = preferred
+    .map((file) => steamCdnAsset(appId, file))
+    .filter((url) => url !== cover)
+
+  return { cover, coverFallbacks: fallbacks }
+}
+
+function normalizeSteamGame(fields) {
+  const appId = String(fields.appId)
+  const art = steamCoverUrls(appId)
+  return {
+    ...fields,
+    cover: art.cover,
+    coverFallbacks: art.coverFallbacks,
+    hero: steamAssetUrl(appId, 'library_hero.jpg'),
+    header: steamAssetUrl(appId, 'header.jpg'),
+  }
+}
+
 function parseAppManifest(filePath) {
   const text = fs.readFileSync(filePath, 'utf8')
   const parsed = parseVdfObject(text)
@@ -104,16 +161,13 @@ function parseAppManifest(filePath) {
   const stateFlags = Number(state.StateFlags || 0)
   const installed = (stateFlags & 4) === 4
 
-  return {
+  return normalizeSteamGame({
     id: `steam:${appId}`,
     appId,
     title: name,
     store: 'steam',
     runner: 'steam',
     installed,
-    cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`,
-    hero: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
-    header: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`,
     developer: '',
     description: installed
       ? 'Installed locally via Steam.'
@@ -123,8 +177,9 @@ function parseAppManifest(filePath) {
     launchTarget: appId,
     canInstall: !installed,
     canLaunch: installed,
+    canUninstall: installed,
     source: 'steam-local',
-  }
+  })
 }
 
 export function getInstalledSteamGames() {
@@ -182,16 +237,13 @@ export async function getOwnedSteamGames() {
     .map((game) => {
       const appId = String(game.appid)
       const isInstalled = installedIds.has(appId)
-      return {
+      return normalizeSteamGame({
         id: `steam:${appId}`,
         appId,
         title: game.name || `Steam ${appId}`,
         store: 'steam',
         runner: 'steam',
         installed: isInstalled,
-        cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`,
-        hero: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_hero.jpg`,
-        header: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`,
         developer: '',
         description: isInstalled
           ? 'Installed locally via Steam.'
@@ -201,8 +253,9 @@ export async function getOwnedSteamGames() {
         launchTarget: appId,
         canInstall: !isInstalled,
         canLaunch: isInstalled,
+        canUninstall: isInstalled,
         source: 'steam-api',
-      }
+      })
     })
     .sort((a, b) => a.title.localeCompare(b.title))
 

@@ -5,6 +5,8 @@ import path from 'node:path'
 import { getGameDetails } from './details.js'
 import { launchGame } from './launch.js'
 import { collectLibrary } from './library.js'
+import { resolvePrismIconPath } from './prism.js'
+import { resolveSteamLibraryAssetPath } from './steam.js'
 
 function loadEnvFile() {
   const envPath = path.join(process.cwd(), '.env')
@@ -62,6 +64,44 @@ app.get('/api/games/:id/details', async (req, res) => {
   }
 })
 
+app.get('/api/assets/prism/:instanceId/icon', (req, res) => {
+  try {
+    const instanceId = decodeURIComponent(req.params.instanceId)
+    const iconPath = resolvePrismIconPath(instanceId)
+    if (!iconPath || !fs.existsSync(iconPath)) {
+      res.status(404).end()
+      return
+    }
+    res.sendFile(iconPath)
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to load icon' })
+  }
+})
+
+app.get('/api/assets/steam/:appId/:file', (req, res) => {
+  try {
+    const appId = decodeURIComponent(req.params.appId)
+    const file = path.basename(decodeURIComponent(req.params.file))
+    if (!/^[a-zA-Z0-9._-]+$/.test(file)) {
+      res.status(400).json({ error: 'Invalid asset name' })
+      return
+    }
+    const assetPath = resolveSteamLibraryAssetPath(appId, file)
+    if (!assetPath || !fs.existsSync(assetPath)) {
+      res.status(404).end()
+      return
+    }
+    res.sendFile(path.basename(assetPath), {
+      root: path.dirname(assetPath),
+      headers: {
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to load Steam asset' })
+  }
+})
+
 app.post('/api/launch', async (req, res) => {
   try {
     const { id, action = 'launch' } = req.body || {}
@@ -82,9 +122,11 @@ app.post('/api/launch', async (req, res) => {
         ok: true,
         method: 'demo',
         message:
-          action === 'install'
-            ? `Simulated install for ${game.title}`
-            : `Simulated launch for ${game.title}`,
+          action === 'uninstall'
+            ? `Simulated uninstall for ${game.title}`
+            : action === 'install'
+              ? `Simulated install for ${game.title}`
+              : `Simulated launch for ${game.title}`,
       })
       return
     }
@@ -94,13 +136,37 @@ app.post('/api/launch', async (req, res) => {
       return
     }
 
+    if (action === 'install' && !game.canInstall) {
+      res.status(400).json({ error: 'Game is already installed' })
+      return
+    }
+
+    if (action === 'uninstall' && !game.canUninstall) {
+      res.status(400).json({ error: 'Uninstall is not available for this game' })
+      return
+    }
+
     const result = launchGame(game, action)
+    const installHint =
+      result?.logFile
+        ? `Starting install for ${game.title} (log: ${result.logFile})`
+        : `Starting install for ${game.title}`
+    const uninstallHint =
+      result?.logFile
+        ? `Starting uninstall for ${game.title} (log: ${result.logFile})`
+        : `Starting uninstall for ${game.title}`
     res.json({
       ok: true,
       message:
-        action === 'install'
-          ? `Opening installer for ${game.title}`
-          : `Launching ${game.title}`,
+        action === 'uninstall'
+          ? game.store === 'steam'
+            ? `Opening Steam uninstall for ${game.title}`
+            : uninstallHint
+          : action === 'install'
+            ? game.store === 'steam'
+              ? `Opening installer for ${game.title}`
+              : installHint
+            : `Launching ${game.title}`,
       ...result,
     })
   } catch (error) {

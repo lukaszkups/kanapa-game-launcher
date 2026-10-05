@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { enrichSparseDetails } from './enrich.js'
+import { enrichSparseDetails, getMinecraftMedia } from './enrich.js'
 import { collectLibrary } from './library.js'
 
 const steamCache = new Map()
@@ -59,6 +59,7 @@ function baseDetails(game) {
     installed: game.installed,
     canLaunch: game.canLaunch,
     canInstall: game.canInstall,
+    canUninstall: game.canUninstall,
     cover: game.cover,
     hero: game.hero || game.header || game.cover,
     header: game.header || game.hero || game.cover,
@@ -183,6 +184,74 @@ function epicSlugFromUrl(storeUrl = '') {
   }
 }
 
+function epicProductPageUrl(slug) {
+  const cleaned = String(slug || '').trim()
+  if (!cleaned) return ''
+  return `https://store.epicgames.com/en-US/p/${encodeURIComponent(cleaned)}`
+}
+
+function epicBrowseSearchUrl(title = '') {
+  const query = String(title || '').trim()
+  if (!query) return 'https://store.epicgames.com/en-US/browse'
+  return `https://store.epicgames.com/en-US/browse?q=${encodeURIComponent(query)}`
+}
+
+function slugifyEpicTitle(title = '') {
+  return String(title)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[™®]/g, '')
+    .replace(/[^\w\s-]+/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function epicSlugCandidates(storeUrl, title = '') {
+  const slug = epicSlugFromUrl(storeUrl)
+  const candidates = []
+  if (slug) {
+    candidates.push(slug)
+    candidates.push(slug.replace(/--+/g, '-'))
+    candidates.push(slug.replace(/-\([^)]*\)/g, '').replace(/\([^)]*\)/g, ''))
+  }
+  const fromTitle = slugifyEpicTitle(title)
+  if (fromTitle) candidates.push(fromTitle)
+  return [...new Set(candidates.filter(Boolean))]
+}
+
+async function resolveEpicStoreLink({ storeUrl, title }) {
+  const candidates = epicSlugCandidates(storeUrl, title)
+  for (const candidate of candidates.slice(0, 5)) {
+    const product = await fetchEpicStoreProduct(candidate)
+    if (product?._slug) {
+      return {
+        storeUrl: epicProductPageUrl(product._slug),
+        slug: product._slug,
+        product,
+      }
+    }
+  }
+
+  // Heroic still ships legacy epicgames.com/store/product/… links; many slugs
+  // no longer resolve. Prefer store search over a dead product URL.
+  if (title) {
+    return {
+      storeUrl: epicBrowseSearchUrl(title),
+      slug: candidates[0] || '',
+      product: null,
+    }
+  }
+
+  const slug = candidates[0] || epicSlugFromUrl(storeUrl)
+  return {
+    storeUrl: slug ? epicProductPageUrl(slug) : '',
+    slug,
+    product: null,
+  }
+}
+
 function pickEpicProductPage(product) {
   const pages = product?.pages || []
   return (
@@ -233,12 +302,16 @@ function localEpicFallback(game) {
   const keyImages = meta?.metadata?.keyImages || []
   const imageUrls = keyImages.map((image) => image.url).filter(Boolean)
 
-  const storeUrl =
+  const rawStoreUrl =
     info[game.appId]?.storeUrl ||
     entry?.extra?.storeUrl ||
     entry?.store_url ||
     game.storeUrl ||
     ''
+  const slug = epicSlugCandidates(rawStoreUrl, game.title || entry?.title || '')[0] || ''
+  const storeUrl = slug
+    ? epicProductPageUrl(slug)
+    : epicBrowseSearchUrl(game.title || entry?.title || '')
 
   return {
     ...baseDetails(game),
@@ -262,7 +335,8 @@ function localEpicFallback(game) {
         full: url,
       })),
     storeUrl,
-    slug: epicSlugFromUrl(storeUrl),
+    legacyStoreUrl: rawStoreUrl,
+    slug,
   }
 }
 
@@ -283,8 +357,12 @@ async function getEpicShopDetails(game) {
   let details = local
 
   try {
-    const product = await fetchEpicStoreProduct(local.slug)
-    const page = pickEpicProductPage(product)
+    const resolved = await resolveEpicStoreLink({
+      storeUrl: local.legacyStoreUrl || local.storeUrl,
+      title: game.title || local.title,
+    })
+    const product = resolved.product
+    const page = product ? pickEpicProductPage(product) : null
     if (page) {
       const about = page.data?.about || {}
       const screenshots = collectEpicScreenshots(page)
@@ -301,11 +379,21 @@ async function getEpicShopDetails(game) {
         cover,
         hero,
         screenshots: screenshots.length ? screenshots : local.screenshots,
-        storeUrl: local.storeUrl,
+        storeUrl: resolved.storeUrl,
+        slug: resolved.slug,
+      }
+    } else {
+      details = {
+        ...local,
+        storeUrl: resolved.storeUrl,
+        slug: resolved.slug,
       }
     }
   } catch {
-    details = local
+    details = {
+      ...local,
+      storeUrl: local.title ? epicBrowseSearchUrl(local.title) : local.storeUrl,
+    }
   }
 
   epicCache.set(game.id, details)
@@ -325,6 +413,35 @@ function getAmazonShopDetails(game) {
   }
 }
 
+const MINECRAFT_DESCRIPTION =
+  'Minecraft is a sandbox game about placing blocks and going on adventures. Explore randomly generated worlds, gather resources, craft tools, build structures, and survive against mobs — alone or with friends.'
+
+function getPrismShopDetails(game) {
+  const media = getMinecraftMedia()
+  const versionBits = []
+  if (game.minecraftVersion) versionBits.push(`Minecraft ${game.minecraftVersion}`)
+  if (game.loader) versionBits.push(game.loader)
+  const instanceLine = versionBits.length
+    ? `Prism instance “${game.title}” (${versionBits.join(' · ')}).`
+    : `Prism instance “${game.title}”.`
+
+  return {
+    ...baseDetails(game),
+    publisher: 'Mojang Studios',
+    description: MINECRAFT_DESCRIPTION,
+    longDescription: `${MINECRAFT_DESCRIPTION}\n\n${instanceLine} Launched through Prism Launcher.`,
+    releaseDate: game.minecraftVersion || '',
+    genres: ['Sandbox', 'Survival', 'Minecraft', game.loader].filter(Boolean),
+    cover: media.cover,
+    hero: media.hero,
+    header: media.header,
+    screenshots: [],
+    storeUrl: 'https://www.minecraft.net/',
+    developer: 'Mojang Studios',
+    enrichedFrom: ['minecraft'],
+  }
+}
+
 export async function getGameDetails(id) {
   const { games } = await collectLibrary()
   const game = games.find((entry) => entry.id === id)
@@ -335,6 +452,7 @@ export async function getGameDetails(id) {
   else if (game.store === 'gog') details = getGogShopDetails(game)
   else if (game.store === 'epic') details = await getEpicShopDetails(game)
   else if (game.store === 'amazon') details = getAmazonShopDetails(game)
+  else if (game.store === 'prism') details = await getPrismShopDetails(game)
   else details = baseDetails(game)
 
   return enrichSparseDetails(details)

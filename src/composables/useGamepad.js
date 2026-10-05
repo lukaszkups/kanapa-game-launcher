@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 const BUTTON = {
   A: 0,
@@ -15,6 +15,12 @@ const BUTTON = {
   RIGHT: 15,
 }
 
+const DISCONNECT_DEBOUNCE_MS = 750
+const STICK_DEADZONE = 0.55
+const SCROLL_DEADZONE = 0.22
+const LEFT_STICK_COOLDOWN_MS = 180
+const SCREENSHOT_COOLDOWN_MS = 220
+
 export function useGamepad({
   itemCount,
   columns,
@@ -25,19 +31,64 @@ export function useGamepad({
   onBack,
   onSecondary,
   onInstall,
+  onFilterPrev,
+  onFilterNext,
+  onScreenshot,
+  onShopScroll,
+  onShopThumbsScroll,
 }) {
   const connected = ref(false)
   const hint = ref('Connect a gamepad or use arrow keys')
 
   let rafId = 0
   let previousButtons = []
-  let axisCooldown = 0
+  let leftStickCooldown = 0
+  let screenshotCooldown = 0
+  let stickyPadIndex = null
+  let disconnectTimer = 0
 
   function setConnected(isConnected) {
+    if (connected.value === isConnected) return
     connected.value = isConnected
     hint.value = isConnected
-      ? 'A launch · X shop panel · Y install · D-pad / stick move'
-      : 'Arrow keys move · Enter launch · D shop panel · I install'
+      ? 'A launch · Y install/uninstall · L1/R1 tabs · L-stick grid · R-stick shop · D-pad shots'
+      : 'Arrows grid · Enter launch · [ / ] tabs · I install/uninstall'
+  }
+
+  function clearButtonState() {
+    previousButtons = []
+    leftStickCooldown = 0
+    screenshotCooldown = 0
+  }
+
+  function markConnected() {
+    if (disconnectTimer) {
+      clearTimeout(disconnectTimer)
+      disconnectTimer = 0
+    }
+    setConnected(true)
+  }
+
+  function scheduleDisconnect() {
+    if (disconnectTimer || !connected.value) return
+    disconnectTimer = window.setTimeout(() => {
+      disconnectTimer = 0
+      stickyPadIndex = null
+      clearButtonState()
+      setConnected(false)
+    }, DISCONNECT_DEBOUNCE_MS)
+  }
+
+  function resolvePad(pads) {
+    if (stickyPadIndex != null) {
+      const sticky = pads[stickyPadIndex]
+      if (sticky) return sticky
+    }
+
+    const index = pads.findIndex(Boolean)
+    if (index === -1) return null
+    stickyPadIndex = index
+    return pads[index]
   }
 
   function pressed(buttons, index) {
@@ -59,46 +110,72 @@ export function useGamepad({
     if (next !== current) onMove(next)
   }
 
+  function cycleScreenshot(delta, now) {
+    if (!onScreenshot || now < screenshotCooldown) return
+    onScreenshot(delta)
+    screenshotCooldown = now + SCREENSHOT_COOLDOWN_MS
+  }
+
   function poll() {
     const pads = navigator.getGamepads?.() || []
-    const pad = [...pads].find(Boolean)
-    setConnected(Boolean(pad))
+    const pad = resolvePad(pads)
 
     if (pad) {
+      markConnected()
+      stickyPadIndex = pad.index
+
       const buttons = pad.buttons
       const now = performance.now()
 
-      if (!detailsOpen()) {
-        if (pressed(buttons, BUTTON.LEFT) || pressed(buttons, BUTTON.LB)) navigate('left')
-        if (pressed(buttons, BUTTON.RIGHT) || pressed(buttons, BUTTON.RB)) navigate('right')
-        if (pressed(buttons, BUTTON.UP)) navigate('up')
-        if (pressed(buttons, BUTTON.DOWN)) navigate('down')
+      // D-pad: screenshots in the shop sidebar
+      if (pressed(buttons, BUTTON.LEFT) || pressed(buttons, BUTTON.UP)) {
+        cycleScreenshot(-1, now)
+      }
+      if (pressed(buttons, BUTTON.RIGHT) || pressed(buttons, BUTTON.DOWN)) {
+        cycleScreenshot(1, now)
+      }
 
+      // Left stick: grid selection
+      if (!detailsOpen()) {
         const axisX = pad.axes[0] || 0
         const axisY = pad.axes[1] || 0
-        if (now > axisCooldown) {
-          if (axisX < -0.55) {
+        if (now > leftStickCooldown) {
+          if (axisX < -STICK_DEADZONE) {
             navigate('left')
-            axisCooldown = now + 180
-          } else if (axisX > 0.55) {
+            leftStickCooldown = now + LEFT_STICK_COOLDOWN_MS
+          } else if (axisX > STICK_DEADZONE) {
             navigate('right')
-            axisCooldown = now + 180
-          } else if (axisY < -0.55) {
+            leftStickCooldown = now + LEFT_STICK_COOLDOWN_MS
+          } else if (axisY < -STICK_DEADZONE) {
             navigate('up')
-            axisCooldown = now + 180
-          } else if (axisY > 0.55) {
+            leftStickCooldown = now + LEFT_STICK_COOLDOWN_MS
+          } else if (axisY > STICK_DEADZONE) {
             navigate('down')
-            axisCooldown = now + 180
+            leftStickCooldown = now + LEFT_STICK_COOLDOWN_MS
           }
         }
       }
 
+      // Right stick: sidebar scroll (Y = body, X = screenshot thumbs)
+      const rightX = pad.axes[2] || 0
+      const rightY = pad.axes[3] || 0
+      if (Math.abs(rightY) > SCROLL_DEADZONE) {
+        onShopScroll?.(rightY * 22)
+      }
+      if (Math.abs(rightX) > SCROLL_DEADZONE) {
+        onShopThumbsScroll?.(rightX * 18)
+      }
+
+      if (pressed(buttons, BUTTON.LB)) onFilterPrev?.()
+      if (pressed(buttons, BUTTON.RB)) onFilterNext?.()
       if (pressed(buttons, BUTTON.A)) onConfirm()
       if (pressed(buttons, BUTTON.B)) onBack()
       if (pressed(buttons, BUTTON.X)) onSecondary()
       if (pressed(buttons, BUTTON.Y)) onInstall()
 
       previousButtons = buttons.map((button) => Boolean(button?.pressed))
+    } else {
+      scheduleDisconnect()
     }
 
     rafId = requestAnimationFrame(poll)
@@ -121,15 +198,27 @@ export function useGamepad({
     if (key === 'Escape' || key.toLowerCase() === 'b') onBack()
     if (key.toLowerCase() === 'd' || key.toLowerCase() === 'x') onSecondary()
     if (key.toLowerCase() === 'i' || key.toLowerCase() === 'y') onInstall()
+    if (key === '[' || key === ',') onFilterPrev?.()
+    if (key === ']' || key === '.') onFilterNext?.()
+    if (key === '-' || key === '_') onScreenshot?.(-1)
+    if (key === '=' || key === '+') onScreenshot?.(1)
   }
 
-  function onConnect() {
-    setConnected(true)
+  function onConnect(event) {
+    stickyPadIndex = event.gamepad?.index ?? stickyPadIndex
+    markConnected()
   }
 
-  function onDisconnect() {
+  function onDisconnect(event) {
+    if (event.gamepad?.index === stickyPadIndex) {
+      stickyPadIndex = null
+    }
     const pads = navigator.getGamepads?.() || []
-    setConnected([...pads].some(Boolean))
+    if ([...pads].some(Boolean)) {
+      markConnected()
+      return
+    }
+    scheduleDisconnect()
   }
 
   onMounted(() => {
@@ -141,12 +230,11 @@ export function useGamepad({
 
   onUnmounted(() => {
     cancelAnimationFrame(rafId)
+    if (disconnectTimer) clearTimeout(disconnectTimer)
     window.removeEventListener('gamepadconnected', onConnect)
     window.removeEventListener('gamepaddisconnected', onDisconnect)
     window.removeEventListener('keydown', onKeydown)
   })
-
-  watch(connected, () => {}, { flush: 'sync' })
 
   return { connected, hint }
 }

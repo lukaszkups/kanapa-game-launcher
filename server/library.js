@@ -1,4 +1,5 @@
 import { getHeroicGames } from './heroic.js'
+import { getPrismGames } from './prism.js'
 import { getInstalledSteamGames, getOwnedSteamGames } from './steam.js'
 
 const DEMO_GAMES = [
@@ -20,6 +21,7 @@ const DEMO_GAMES = [
     launchTarget: 'hadal',
     canInstall: false,
     canLaunch: true,
+    canUninstall: false,
     source: 'demo',
   },
   {
@@ -39,6 +41,7 @@ const DEMO_GAMES = [
     launchTarget: 'orbit',
     canInstall: true,
     canLaunch: false,
+    canUninstall: false,
     source: 'demo',
   },
 ]
@@ -54,11 +57,14 @@ export async function collectLibrary() {
   }
 
   const heroic = getHeroicGames()
+  const prism = getPrismGames()
   const steamGames = steamOwned.configured ? steamOwned.games : steamInstalled.games
-  const games = [...steamGames, ...heroic.games].sort((a, b) => {
-    if (a.installed !== b.installed) return a.installed ? -1 : 1
-    return a.title.localeCompare(b.title)
-  })
+  const games = [...steamGames, ...heroic.games, ...prism.games]
+    .map(({ instancePath, ...game }) => game)
+    .sort((a, b) => {
+      if (a.installed !== b.installed) return a.installed ? -1 : 1
+      return a.title.localeCompare(b.title)
+    })
 
   if (!games.length) {
     return {
@@ -71,6 +77,7 @@ export async function collectLibrary() {
           error: steamOwned.error,
         },
         heroic: { available: heroic.available, count: 0 },
+        prism: { available: prism.available, count: 0 },
         demo: true,
       },
     }
@@ -90,6 +97,12 @@ export async function collectLibrary() {
         available: heroic.available,
         count: heroic.games.length,
         root: heroic.root,
+      },
+      prism: {
+        available: prism.available,
+        count: prism.games.length,
+        root: prism.root,
+        binary: Boolean(prism.binary),
       },
       demo: false,
     },

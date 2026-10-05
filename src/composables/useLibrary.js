@@ -56,6 +56,54 @@ export function useLibrary() {
     }
   }
 
+  async function refreshGame(gameId) {
+    if (!gameId) return null
+    try {
+      const response = await fetch('/api/library')
+      if (!response.ok) {
+        throw new Error(`Library request failed (${response.status})`)
+      }
+      const payload = await response.json()
+      const nextGames = payload.games || []
+      const updated = nextGames.find((entry) => entry.id === gameId)
+      if (!updated) return null
+
+      const index = games.value.findIndex((entry) => entry.id === gameId)
+      if (index === -1) return updated
+
+      // Patch in place so the grid keeps scroll/selection.
+      const patched = games.value.slice()
+      patched[index] = { ...patched[index], ...updated }
+      games.value = patched
+
+      if (shopDetails.value?.id === gameId) {
+        shopDetails.value = {
+          ...shopDetails.value,
+          installed: updated.installed,
+          canInstall: updated.canInstall,
+          canLaunch: updated.canLaunch,
+          canUninstall: updated.canUninstall,
+        }
+      }
+
+      if (payload.sources) sources.value = payload.sources
+      return updated
+    } catch (err) {
+      error.value = err.message || 'Could not refresh game'
+      return null
+    }
+  }
+
+  async function refreshGameUntil(gameId, predicate, { attempts = 8, delayMs = 1500 } = {}) {
+    let updated = await refreshGame(gameId)
+    for (let i = 0; i < attempts; i++) {
+      if (updated && predicate(updated)) return updated
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+      updated = await refreshGame(gameId)
+    }
+    return updated
+  }
+
   async function loadShopDetails(game) {
     const requestId = ++shopRequestId
     if (!game) {
@@ -115,6 +163,8 @@ export function useLibrary() {
     shopDetails,
     shopLoading,
     loadLibrary,
+    refreshGame,
+    refreshGameUntil,
     loadShopDetails,
     actOnGame,
   }

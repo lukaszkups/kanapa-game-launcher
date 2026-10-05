@@ -301,13 +301,30 @@ function applyWikiEnrichment(details, payload) {
   }
 }
 
+/** Single default art used for all Prism / Minecraft library entries. */
+export const DEFAULT_MINECRAFT_IMAGE =
+  'https://upload.wikimedia.org/wikipedia/commons/3/37/Minecraft_Key-art.png'
+
+export function getMinecraftMedia() {
+  return {
+    cover: DEFAULT_MINECRAFT_IMAGE,
+    hero: DEFAULT_MINECRAFT_IMAGE,
+    header: DEFAULT_MINECRAFT_IMAGE,
+    screenshots: [],
+  }
+}
+
 export async function enrichSparseDetails(details) {
   if (!details || !needsEnrichment(details)) return details
 
   let enriched = details
 
   try {
-    if (needsEnrichment(enriched) && enriched.store !== 'steam') {
+    if (
+      needsEnrichment(enriched) &&
+      enriched.store !== 'steam' &&
+      enriched.store !== 'prism'
+    ) {
       enriched = await enrichFromSteamStore(enriched)
     }
   } catch {
@@ -315,7 +332,7 @@ export async function enrichSparseDetails(details) {
   }
 
   try {
-    if (needsEnrichment(enriched)) {
+    if (needsEnrichment(enriched) && enriched.store !== 'prism') {
       enriched = await enrichFromWikipedia(enriched)
     }
   } catch {
