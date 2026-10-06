@@ -282,7 +282,33 @@ onUnmounted(() => {
         target="_blank"
         rel="noreferrer"
       >
-        <span class="logo" aria-hidden="true"></span>
+        <svg
+          class="logo"
+          viewBox="0 0 40 28"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <!-- couch backrest -->
+          <rect x="6" y="2" width="28" height="10" rx="2" fill="currentColor" />
+          <!-- armrests -->
+          <rect x="1" y="10" width="6" height="12" rx="2" fill="currentColor" />
+          <rect x="33" y="10" width="6" height="12" rx="2" fill="currentColor" />
+          <!-- seat -->
+          <rect x="7" y="11" width="26" height="11" rx="1.5" fill="currentColor" />
+          <!-- cushion split -->
+          <rect x="19.25" y="12" width="1.5" height="9" fill="var(--blue-dark)" />
+          <!-- d-pad (left cushion) -->
+          <rect x="11.5" y="14.5" width="5" height="1.6" fill="var(--gold)" />
+          <rect x="13.2" y="12.8" width="1.6" height="5" fill="var(--gold)" />
+          <!-- face buttons (right cushion) -->
+          <circle cx="25.2" cy="15.2" r="1.15" fill="var(--gold)" />
+          <circle cx="28.2" cy="15.2" r="1.15" fill="var(--gold)" />
+          <circle cx="25.2" cy="18.2" r="1.15" fill="var(--gold)" />
+          <circle cx="28.2" cy="18.2" r="1.15" fill="var(--gold)" />
+          <!-- legs -->
+          <rect x="5" y="22" width="2.2" height="4" fill="currentColor" />
+          <rect x="32.8" y="22" width="2.2" height="4" fill="currentColor" />
+        </svg>
         <span class="logo-text">Kanapa Game Launcher</span>
       </a>
       <div class="topbar-meta">

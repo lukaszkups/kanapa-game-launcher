@@ -26,11 +26,14 @@ async function loadSettings() {
   try {
     const response = await fetch("/api/settings");
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Failed to load settings");
+    if (!response.ok)
+      throw new Error(payload.error || "Failed to load settings");
     steamId.value = payload.steamId || "";
     keyConfigured.value = Boolean(payload.steamApiKeyConfigured);
     keyHint.value = payload.steamApiKeyHint || "";
-    steamApiKey.value = payload.steamApiKeyConfigured ? payload.steamApiKeyHint : "";
+    steamApiKey.value = payload.steamApiKeyConfigured
+      ? payload.steamApiKeyHint
+      : "";
     keepExistingKey.value = Boolean(payload.steamApiKeyConfigured);
     settingsPath.value = payload.settingsPath || "";
     credentialSource.value = payload.credentialSource || "none";
@@ -76,7 +79,8 @@ async function save() {
       body: JSON.stringify(body),
     });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Failed to save settings");
+    if (!response.ok)
+      throw new Error(payload.error || "Failed to save settings");
     emit("saved", payload);
     emit("close");
   } catch (err) {
@@ -103,7 +107,12 @@ function onBackdrop(event) {
     <div class="modal">
       <header>
         <h2 id="settings-title">Settings</h2>
-        <button type="button" class="close" aria-label="Close" @click="$emit('close')">
+        <button
+          type="button"
+          class="close"
+          aria-label="Close"
+          @click="$emit('close')"
+        >
           ×
         </button>
       </header>
@@ -123,8 +132,8 @@ function onBackdrop(event) {
             <span>Steam ID (64-bit)</span>
             <input
               v-model="steamId"
-              type="text"
               inputmode="numeric"
+              type="password"
               autocomplete="off"
               placeholder="7656119…"
             />
@@ -148,16 +157,16 @@ function onBackdrop(event) {
               target="_blank"
               rel="noreferrer"
               >steamcommunity.com/dev/apikey</a
-            >.
-            Leave the key field unchanged to keep the saved one.
+            >. Leave the key field unchanged to keep the saved one.
           </p>
         </section>
 
         <section class="block">
           <h3>Desktop</h3>
           <p class="help">
-            These apply when running the Electron desktop app
-            (<code>npm run desktop</code>).
+            These apply when running the Electron desktop app (<code
+              >npm run desktop</code
+            >).
           </p>
 
           <label class="check">
@@ -179,7 +188,9 @@ function onBackdrop(event) {
         </p>
 
         <div class="actions">
-          <button type="button" class="ghost" @click="$emit('close')">Cancel</button>
+          <button type="button" class="ghost" @click="$emit('close')">
+            Cancel
+          </button>
           <button type="submit" class="primary" :disabled="saving">
             {{ saving ? "Saving…" : "Save" }}
           </button>

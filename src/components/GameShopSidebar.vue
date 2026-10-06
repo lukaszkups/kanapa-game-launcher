@@ -333,6 +333,25 @@ button:hover {
   padding: 0.6rem 0.75rem;
   overflow-x: auto;
   background: var(--black);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(236, 189, 41, 0.45) transparent;
+}
+
+.thumbs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.thumbs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thumbs::-webkit-scrollbar-thumb {
+  background: rgba(236, 189, 41, 0.45);
+  border-radius: 0;
+}
+
+.thumbs::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 189, 41, 0.7);
 }
 
 .thumb {
@@ -361,6 +380,33 @@ button:hover {
   overflow-x: hidden;
   overflow-y: auto;
   color: var(--black);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(236, 189, 41, 0.45) rgba(255, 255, 255, 0.04);
+}
+
+.body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 1px solid rgba(236, 189, 41, 0.12);
+}
+
+.body::-webkit-scrollbar-thumb {
+  background: rgba(236, 189, 41, 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.body::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 189, 41, 0.7);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.body::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .store {
