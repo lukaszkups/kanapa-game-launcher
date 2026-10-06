@@ -6,9 +6,6 @@ const NODE_ID = "particle-canvas";
 
 let started = false;
 let retryId = 0;
-let resizeTimer = 0;
-let lastWidth = 0;
-let lastHeight = 0;
 let resizeObserver = null;
 
 function getNode() {
@@ -19,26 +16,13 @@ function nodeReady(node) {
   return Boolean(node && node.clientWidth > 0 && node.clientHeight > 0);
 }
 
-function clearPartikle(node) {
-  if (!node) return;
-  node.replaceChildren();
-}
+function startPartikle() {
+  // partikle has no destroy API — calling it again stacks orphan RAF loops
+  // and resize listeners that keep clearing detached canvases.
+  if (started) return true;
 
-function startPartikle({ force = false } = {}) {
   const node = getNode();
   if (!nodeReady(node)) return false;
-
-  const width = node.clientWidth;
-  const height = node.clientHeight;
-  if (!force && started && width === lastWidth && height === lastHeight) {
-    return true;
-  }
-
-  node.style.width = "100%";
-  node.style.height = "100%";
-
-  // Partikle has no destroy API — clear old canvases, then create a fresh one.
-  clearPartikle(node);
 
   partikle({
     nodeId: NODE_ID,
@@ -48,17 +32,11 @@ function startPartikle({ force = false } = {}) {
   });
 
   started = true;
-  lastWidth = width;
-  lastHeight = height;
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
   return true;
-}
-
-function scheduleRestart() {
-  if (resizeTimer) clearTimeout(resizeTimer);
-  resizeTimer = window.setTimeout(() => {
-    resizeTimer = 0;
-    startPartikle({ force: true });
-  }, 150);
 }
 
 onMounted(async () => {
@@ -78,30 +56,24 @@ onMounted(async () => {
       retryId = window.setTimeout(retry, 50);
     };
     retryId = window.setTimeout(retry, 50);
-  }
 
-  resizeObserver = new ResizeObserver(() => {
-    if (!started) {
+    // Desktop can mount before the viewport has a non-zero size.
+    resizeObserver = new ResizeObserver(() => {
       startPartikle();
-      return;
-    }
-    scheduleRestart();
-  });
-  resizeObserver.observe(node);
-  if (node.parentElement) resizeObserver.observe(node.parentElement);
-
-  window.addEventListener("resize", scheduleRestart);
+    });
+    resizeObserver.observe(node);
+  }
 });
 
 onUnmounted(() => {
   if (retryId) clearTimeout(retryId);
-  if (resizeTimer) clearTimeout(resizeTimer);
-  window.removeEventListener("resize", scheduleRestart);
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
-  clearPartikle(getNode());
+  const node = getNode();
+  if (node) node.replaceChildren();
+  started = false;
 });
 </script>
 
@@ -113,13 +85,12 @@ onUnmounted(() => {
 
 <style scoped>
 .particle-canvas-wrapper {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 100vh;
+  z-index: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   pointer-events: none;
 }
@@ -128,7 +99,6 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 100vh;
   overflow: hidden;
 }
 </style>
