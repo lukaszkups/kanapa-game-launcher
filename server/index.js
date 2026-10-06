@@ -6,6 +6,7 @@ import { getGameDetails } from './details.js'
 import { launchGame } from './launch.js'
 import { collectLibrary } from './library.js'
 import { resolvePrismIconPath } from './prism.js'
+import { getPublicSettings, saveSettings } from './settings.js'
 import { resolveSteamLibraryAssetPath } from './steam.js'
 
 function loadEnvFile() {
@@ -39,6 +40,33 @@ app.use(express.json())
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
+})
+
+app.get('/api/settings', (_req, res) => {
+  res.json(getPublicSettings())
+})
+
+app.put('/api/settings', (req, res) => {
+  try {
+    const body = req.body || {}
+    const patch = {}
+    if (Object.prototype.hasOwnProperty.call(body, 'steamId')) {
+      patch.steamId = body.steamId
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'steamApiKey')) {
+      const value = String(body.steamApiKey || '').trim()
+      // Empty string clears; placeholder hint means "keep existing".
+      if (value.startsWith('••••')) {
+        // leave steamApiKey unchanged
+      } else {
+        patch.steamApiKey = value
+      }
+    }
+    saveSettings(patch)
+    res.json({ ok: true, ...getPublicSettings() })
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to save settings' })
+  }
 })
 
 app.get('/api/library', async (_req, res) => {
@@ -174,6 +202,33 @@ app.post('/api/launch', async (req, res) => {
   }
 })
 
+function resolveDistDir() {
+  const candidates = [
+    path.join(process.cwd(), 'dist'),
+    path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'dist'),
+  ]
+  return candidates.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) || null
+}
+
+const distDir = resolveDistDir()
+if (process.env.KANAPA_SERVE_STATIC === '1' && distDir) {
+  app.use(express.static(distDir))
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      next()
+      return
+    }
+    res.sendFile(path.join(distDir, 'index.html'))
+  })
+}
+
 app.listen(PORT, () => {
   console.log(`Kanapa Game Launcher bridge listening on http://localhost:${PORT}`)
+  if (process.env.KANAPA_SERVE_STATIC === '1') {
+    console.log(
+      distDir
+        ? `Serving desktop UI from ${distDir}`
+        : 'KANAPA_SERVE_STATIC set but dist/ missing — run npm run build first',
+    )
+  }
 })

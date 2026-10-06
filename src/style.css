@@ -19,6 +19,8 @@ html,
 body,
 #app {
   min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
@@ -37,6 +39,8 @@ body {
   position: relative;
   z-index: 1;
   isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 button,
@@ -49,6 +53,7 @@ a {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 0 0 3rem;
   padding-right: calc(var(--sidebar-width) + 1.5rem);
   /* clip avoids creating a scroll container that breaks position: sticky */
@@ -129,6 +134,23 @@ a {
   letter-spacing: 0.08em;
 }
 
+.settings-btn {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(236, 189, 41, 0.45);
+  background: transparent;
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.settings-btn:hover {
+  border-color: var(--gold);
+  background: rgba(236, 189, 41, 0.12);
+}
+
 .topbar-meta .status {
   padding: 0.35rem 0.7rem;
   background: transparent;
@@ -139,6 +161,18 @@ a {
   background: var(--gold);
   color: var(--black);
   font-weight: 700;
+}
+
+.inline-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .hero-band {
@@ -301,7 +335,7 @@ a {
   flex: 0 0 auto;
 }
 
-.filter-glyph :deep(.glyph) {
+.filter-glyph .glyph {
   position: static;
   min-width: 1.2rem;
   height: 1.2rem;
@@ -478,7 +512,7 @@ a {
     transform 180ms ease;
 }
 
-.back-to-top.has-glyph :deep(.glyph) {
+.back-to-top.has-glyph .glyph {
   transform: skew(8deg);
   background: rgba(0, 0, 0, 0.85);
   border-color: #fff;

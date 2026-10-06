@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { getSteamCredentials } from './settings.js'
 
 const STEAM_TOOL_PATTERNS = [
   /^proton/i,
@@ -210,8 +211,7 @@ export function getInstalledSteamGames() {
 }
 
 export async function getOwnedSteamGames() {
-  const apiKey = process.env.STEAM_API_KEY
-  const steamId = process.env.STEAM_ID
+  const { apiKey, steamId } = getSteamCredentials()
   if (!apiKey || !steamId) {
     return { games: [], configured: false }
   }

@@ -13,6 +13,18 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+### Desktop app (Electron)
+
+```bash
+# production-style window (builds UI, starts bridge, opens Electron)
+npm run desktop
+
+# hot-reload while developing
+npm run desktop:dev
+```
+
+Electron was chosen over NW.js here: same Chromium window, clearer main/renderer split, and easier packaging later. The Express bridge still does the local Steam/Heroic work; the window is just a native shell around the UI.
+
 ## Controls
 
 | Action                  | Gamepad     | Keyboard   |
@@ -31,12 +43,12 @@ Selecting a game loads a shop-style sidebar (screenshots, description, genres) f
 
 Without credentials the app lists **installed** Steam games from local manifests.
 
-For your full owned Steam library, copy `.env.example` to `.env` in the project root (or export env vars) and set:
+For your full owned Steam library, use **Settings** in the top bar (or the banner link) and enter:
 
-1. `STEAM_API_KEY` from [steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)
-2. `STEAM_ID` (your 64-bit SteamID)
+1. `Steam Web API key` from [steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)
+2. Your 64-bit `Steam ID`
 
-Then restart `npm run dev`.
+These are saved to `~/.config/kanapa-game-library/settings.json` (mode `600`). A project `.env` with `STEAM_API_KEY` / `STEAM_ID` still works as a fallback for development; values saved in Settings take priority.
 
 ## Heroic / Epic / GOG
 

@@ -3,13 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
     "dev:server": "node server/index.js",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "desktop": "npm run build && electron .",
+    "desktop:dev": "KANAPA_DESKTOP_DEV=1 concurrently -k \"npm:dev:server\" \"npm:dev:client\" \"npm:desktop:open\"",
+    "desktop:open": "npx --yes wait-on tcp:8787 tcp:5173 && KANAPA_DESKTOP_DEV=1 electron ."
   },
   "dependencies": {
     "concurrently": "^10.0.5",
@@ -23,6 +27,8 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@vitejs/plugin-vue": "^6.0.8",
-    "vite": "^8.3.0"
+    "electron": "^37.10.3",
+    "vite": "^8.3.0",
+    "wait-on": "^8.0.5"
   }
 }

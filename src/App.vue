@@ -4,6 +4,7 @@ import FloatingParticles from "./components/FloatingParticles.vue";
 import ActionGlyph from "./components/ActionGlyph.vue";
 import GameCard from "./components/GameCard.vue";
 import GameShopSidebar from "./components/GameShopSidebar.vue";
+import SettingsModal from "./components/SettingsModal.vue";
 import { useGamepad } from "./composables/useGamepad.js";
 import { useLibrary } from "./composables/useLibrary.js";
 
@@ -31,12 +32,23 @@ const gridColumns = ref(3);
 const shopRef = ref(null);
 const pendingActionById = ref({});
 const showBackToTop = ref(false);
+const settingsOpen = ref(false);
 
 const pendingAction = computed(() => {
   const id = selectedGame.value?.id;
   if (!id) return "";
   return pendingActionById.value[id] || "";
 });
+
+function openSettings() {
+  settingsOpen.value = true;
+}
+
+async function onSettingsSaved() {
+  notice.value = "Steam settings saved — refreshing library";
+  await loadLibrary();
+  ensureSelection();
+}
 
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -274,6 +286,9 @@ onUnmounted(() => {
         <span class="logo-text">Kanapa Game Launcher</span>
       </a>
       <div class="topbar-meta">
+        <button type="button" class="settings-btn" @click="openSettings">
+          Settings
+        </button>
         <span class="status" :class="{ on: connected }">
           {{ connected ? "Gamepad" : "Keyboard" }}
         </span>
@@ -340,8 +355,8 @@ onUnmounted(() => {
       <p v-else-if="error" class="banner error">{{ error }}</p>
       <p v-else-if="notice" class="banner ok">{{ notice }}</p>
       <p v-else-if="sources?.demo" class="banner">
-        Demo mode — no local libraries found. Start Steam/Heroic sync or set
-        STEAM_API_KEY + STEAM_ID.
+        Demo mode — no local libraries found. Start Steam/Heroic sync or open
+        Settings to add a Steam API key + Steam ID.
       </p>
       <p v-else-if="sources" class="banner quiet">
         Steam: {{ sources.steam.mode }}
@@ -352,7 +367,11 @@ onUnmounted(() => {
           · Prism: {{ sources.prism.count }} instances
         </template>
         <template v-if="!sources.steam.ownedConfigured">
-          · add STEAM_API_KEY and STEAM_ID for the full Steam library
+          ·
+          <button type="button" class="inline-link" @click="openSettings">
+            add Steam API key + Steam ID
+          </button>
+          for the full library
         </template>
       </p>
 
@@ -399,5 +418,11 @@ onUnmounted(() => {
       <ActionGlyph pad="↑" key-label="↑" :connected="connected" />
       <span>Back to top</span>
     </button>
+
+    <SettingsModal
+      :open="settingsOpen"
+      @close="settingsOpen = false"
+      @saved="onSettingsSaved"
+    />
   </div>
 </template>
