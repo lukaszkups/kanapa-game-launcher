@@ -3,6 +3,7 @@ import express from 'express'
 import fs from 'node:fs'
 import path from 'node:path'
 import { getGameDetails } from './details.js'
+import { getSessionStatus } from './gameSession.js'
 import { launchGame } from './launch.js'
 import { collectLibrary } from './library.js'
 import { resolvePrismIconPath } from './prism.js'
@@ -46,6 +47,10 @@ app.get('/api/settings', (_req, res) => {
   res.json(getPublicSettings())
 })
 
+app.get('/api/session', (_req, res) => {
+  res.json(getSessionStatus())
+})
+
 app.put('/api/settings', (req, res) => {
   try {
     const body = req.body || {}
@@ -61,6 +66,12 @@ app.put('/api/settings', (req, res) => {
       } else {
         patch.steamApiKey = value
       }
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'launchOnStartup')) {
+      patch.launchOnStartup = body.launchOnStartup
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'keepOnTop')) {
+      patch.keepOnTop = body.keepOnTop
     }
     saveSettings(patch)
     res.json({ ok: true, ...getPublicSettings() })

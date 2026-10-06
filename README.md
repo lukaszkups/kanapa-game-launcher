@@ -50,6 +50,11 @@ For your full owned Steam library, use **Settings** in the top bar (or the banne
 
 These are saved to `~/.config/kanapa-game-library/settings.json` (mode `600`). A project `.env` with `STEAM_API_KEY` / `STEAM_ID` still works as a fallback for development; values saved in Settings take priority.
 
+Desktop-only options in the same Settings dialog:
+
+- **Launch when the system starts** — installs a login/autostart entry (Linux: `~/.config/autostart/kanapa-game-library.desktop`)
+- **Keep window on top** — pins the Electron window, and automatically turns off while a launched game is running
+
 ## Heroic / Epic / GOG
 
 Games come from Heroic’s cache under `~/.config/heroic`. Log into those stores in Heroic first so the library syncs. Launch uses `heroic://launch/<runner>/<id>`. Installs bypass Heroic’s broken protocol dialog and run Legendary/gogdl in a terminal using Heroic’s login + `defaultInstallPath`.

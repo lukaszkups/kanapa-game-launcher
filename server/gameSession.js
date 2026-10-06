@@ -178,6 +178,7 @@ export function watchGameAndRestoreFocus(game, windowId) {
   let cancelled = false
   const isCancelled = () => cancelled
   const watcher = {
+    game,
     cancel() {
       cancelled = true
     },
@@ -218,4 +219,15 @@ export function watchGameAndRestoreFocus(game, windowId) {
       if (activeWatcher === watcher) activeWatcher = null
     }
   })()
+}
+
+export function getSessionStatus() {
+  const game = activeWatcher?.game || null
+  const gameRunning = Boolean(game && isGameRunning(game))
+  return {
+    watching: Boolean(activeWatcher),
+    gameRunning,
+    gameId: game?.id || null,
+    gameTitle: game?.title || null,
+  }
 }

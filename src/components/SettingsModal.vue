@@ -13,6 +13,8 @@ const keyHint = ref("");
 const keyConfigured = ref(false);
 const settingsPath = ref("");
 const credentialSource = ref("none");
+const launchOnStartup = ref(false);
+const keepOnTop = ref(false);
 const saving = ref(false);
 const loading = ref(false);
 const formError = ref("");
@@ -32,6 +34,8 @@ async function loadSettings() {
     keepExistingKey.value = Boolean(payload.steamApiKeyConfigured);
     settingsPath.value = payload.settingsPath || "";
     credentialSource.value = payload.credentialSource || "none";
+    launchOnStartup.value = Boolean(payload.launchOnStartup);
+    keepOnTop.value = Boolean(payload.keepOnTop);
   } catch (err) {
     formError.value = err.message || "Failed to load settings";
   } finally {
@@ -58,7 +62,11 @@ async function save() {
   saving.value = true;
   formError.value = "";
   try {
-    const body = { steamId: steamId.value.trim() };
+    const body = {
+      steamId: steamId.value.trim(),
+      launchOnStartup: launchOnStartup.value,
+      keepOnTop: keepOnTop.value,
+    };
     if (!keepExistingKey.value) {
       body.steamApiKey = steamApiKey.value.trim();
     }
@@ -94,59 +102,79 @@ function onBackdrop(event) {
   >
     <div class="modal">
       <header>
-        <h2 id="settings-title">Steam settings</h2>
+        <h2 id="settings-title">Settings</h2>
         <button type="button" class="close" aria-label="Close" @click="$emit('close')">
           ×
         </button>
       </header>
 
-      <p class="lede">
-        Optional. Without these, Kanapa only lists
-        <strong>installed</strong> Steam games from local manifests. Add both to
-        load your full owned library.
-      </p>
-
       <p v-if="loading" class="status">Loading…</p>
       <p v-else-if="formError" class="status error">{{ formError }}</p>
 
       <form v-else class="form" @submit.prevent="save">
-        <label>
-          <span>Steam ID (64-bit)</span>
-          <input
-            v-model="steamId"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            placeholder="7656119…"
-          />
-        </label>
+        <section class="block">
+          <h3>Steam library</h3>
+          <p class="lede">
+            Optional. Without these, Kanapa only lists
+            <strong>installed</strong> Steam games from local manifests.
+          </p>
 
-        <label>
-          <span>Steam Web API key</span>
-          <input
-            v-model="steamApiKey"
-            type="password"
-            autocomplete="off"
-            :placeholder="keyConfigured ? keyHint : 'Paste API key'"
-            @input="onKeyInput"
-          />
-        </label>
+          <label>
+            <span>Steam ID (64-bit)</span>
+            <input
+              v-model="steamId"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="7656119…"
+            />
+          </label>
 
-        <p class="help">
-          Get a key at
-          <a
-            href="https://steamcommunity.com/dev/apikey"
-            target="_blank"
-            rel="noreferrer"
-            >steamcommunity.com/dev/apikey</a
-          >.
-          Leave the key field unchanged to keep the saved one.
-        </p>
+          <label>
+            <span>Steam Web API key</span>
+            <input
+              v-model="steamApiKey"
+              type="password"
+              autocomplete="off"
+              :placeholder="keyConfigured ? keyHint : 'Paste API key'"
+              @input="onKeyInput"
+            />
+          </label>
+
+          <p class="help">
+            Get a key at
+            <a
+              href="https://steamcommunity.com/dev/apikey"
+              target="_blank"
+              rel="noreferrer"
+              >steamcommunity.com/dev/apikey</a
+            >.
+            Leave the key field unchanged to keep the saved one.
+          </p>
+        </section>
+
+        <section class="block">
+          <h3>Desktop</h3>
+          <p class="help">
+            These apply when running the Electron desktop app
+            (<code>npm run desktop</code>).
+          </p>
+
+          <label class="check">
+            <input v-model="launchOnStartup" type="checkbox" />
+            <span>Launch Kanapa when the system starts</span>
+          </label>
+
+          <label class="check">
+            <input v-model="keepOnTop" type="checkbox" />
+            <span>Keep window on top (paused while a game is running)</span>
+          </label>
+        </section>
 
         <p v-if="settingsPath" class="meta">
           Saved to <code>{{ settingsPath }}</code>
           <template v-if="credentialSource !== 'none'">
-            · source: {{ credentialSource }}
+            · Steam source: {{ credentialSource }}
           </template>
         </p>
 
@@ -173,7 +201,9 @@ function onBackdrop(event) {
 }
 
 .modal {
-  width: min(440px, 100%);
+  width: min(460px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
   border: 1px solid var(--black);
   background: #111;
   color: var(--gold);
@@ -197,6 +227,14 @@ h2 {
   color: #fff;
 }
 
+h3 {
+  margin: 0;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
 .close {
   border: 0;
   background: transparent;
@@ -211,10 +249,13 @@ h2 {
 .meta,
 .status {
   margin: 0;
-  padding: 0.85rem 1rem 0;
   font-size: 0.9rem;
   line-height: 1.45;
   color: rgba(236, 189, 41, 0.85);
+}
+
+.status {
+  padding: 0.85rem 1rem 0;
 }
 
 .lede strong {
@@ -227,8 +268,15 @@ h2 {
 
 .form {
   display: grid;
-  gap: 0.85rem;
+  gap: 1rem;
   padding: 1rem;
+}
+
+.block {
+  display: grid;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(236, 189, 41, 0.15);
 }
 
 label {
@@ -243,7 +291,27 @@ label span {
   font-weight: 700;
 }
 
-input {
+label.check {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+label.check span {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: rgba(236, 189, 41, 0.92);
+}
+
+label.check input {
+  width: auto;
+  accent-color: var(--gold);
+}
+
+input[type="text"],
+input[type="password"] {
   width: 100%;
   padding: 0.65rem 0.75rem;
   border: 1px solid rgba(236, 189, 41, 0.35);
@@ -251,26 +319,22 @@ input {
   color: #fff;
 }
 
-.help a {
+.help a,
+.help code,
+.meta code {
   color: #fff;
 }
 
 .meta {
-  padding: 0;
   font-size: 0.78rem;
   color: rgba(236, 189, 41, 0.65);
   word-break: break-all;
-}
-
-.meta code {
-  color: #fff;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 0.25rem;
 }
 
 .primary,
