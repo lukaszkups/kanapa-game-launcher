@@ -26,6 +26,7 @@ export function useGamepad({
   columns,
   selectedIndex,
   detailsOpen,
+  enabled,
   onMove,
   onConfirm,
   onBack,
@@ -116,9 +117,34 @@ export function useGamepad({
     screenshotCooldown = now + SCREENSHOT_COOLDOWN_MS
   }
 
+  /** Gamepad API ignores window focus — gate actions ourselves. */
+  function isInputActive() {
+    if (document.visibilityState !== 'visible') return false
+    if (!document.hasFocus()) return false
+    if (enabled && !enabled()) return false
+    return true
+  }
+
+  function syncPadPresence(pad) {
+    if (pad) {
+      markConnected()
+      stickyPadIndex = pad.index
+      // Track held buttons while inactive so resume does not edge-trigger launches.
+      previousButtons = pad.buttons.map((button) => Boolean(button?.pressed))
+      return
+    }
+    scheduleDisconnect()
+  }
+
   function poll() {
     const pads = navigator.getGamepads?.() || []
     const pad = resolvePad(pads)
+
+    if (!isInputActive()) {
+      syncPadPresence(pad)
+      rafId = requestAnimationFrame(poll)
+      return
+    }
 
     if (pad) {
       markConnected()
@@ -182,6 +208,11 @@ export function useGamepad({
   }
 
   function onKeydown(event) {
+    if (!isInputActive()) return
+    if (event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
+      return
+    }
+
     const key = event.key
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(key)) {
       event.preventDefault()

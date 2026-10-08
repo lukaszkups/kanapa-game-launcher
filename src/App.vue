@@ -33,6 +33,8 @@ const shopRef = ref(null);
 const pendingActionById = ref({});
 const showBackToTop = ref(false);
 const settingsOpen = ref(false);
+const gameRunning = ref(false);
+let sessionPollTimer = 0;
 
 const pendingAction = computed(() => {
   const id = selectedGame.value?.id;
@@ -228,6 +230,7 @@ const { connected, hint } = useGamepad({
   columns: () => gridColumns.value,
   selectedIndex: () => selectedIndex.value,
   detailsOpen: () => false,
+  enabled: () => !settingsOpen.value && !gameRunning.value,
   onMove: (index) => selectGame(index),
   onConfirm: () => launchSelected(),
   onBack: () => {},
@@ -243,6 +246,17 @@ const { connected, hint } = useGamepad({
   onShopScroll: (deltaY) => shopRef.value?.scrollBody(deltaY),
   onShopThumbsScroll: (deltaX) => shopRef.value?.scrollThumbs(deltaX),
 });
+
+async function pollGameSession() {
+  try {
+    const response = await fetch("/api/session");
+    if (!response.ok) return;
+    const payload = await response.json();
+    gameRunning.value = Boolean(payload.gameRunning);
+  } catch {
+    // Bridge may be briefly unavailable during restarts.
+  }
+}
 
 watch([filter, query, filteredGames], () => {
   ensureSelection();
@@ -262,6 +276,10 @@ onMounted(async () => {
   window.addEventListener("resize", measureColumns);
   window.addEventListener("scroll", onWindowScroll, { passive: true });
   onWindowScroll();
+  void pollGameSession();
+  sessionPollTimer = window.setInterval(() => {
+    void pollGameSession();
+  }, 1000);
   await loadLibrary();
   ensureSelection();
 });
@@ -269,6 +287,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener("resize", measureColumns);
   window.removeEventListener("scroll", onWindowScroll);
+  if (sessionPollTimer) clearInterval(sessionPollTimer);
 });
 </script>
 
