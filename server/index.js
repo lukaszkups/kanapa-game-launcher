@@ -73,6 +73,9 @@ app.put('/api/settings', (req, res) => {
     if (Object.prototype.hasOwnProperty.call(body, 'keepOnTop')) {
       patch.keepOnTop = body.keepOnTop
     }
+    if (Object.prototype.hasOwnProperty.call(body, 'theme')) {
+      patch.theme = body.theme
+    }
     saveSettings(patch)
     res.json({ ok: true, ...getPublicSettings() })
   } catch (error) {

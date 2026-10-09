@@ -321,7 +321,7 @@ button:hover {
 .hero {
   min-height: 210px;
   background:
-    linear-gradient(135deg, rgba(236, 189, 41, 0.35), rgba(28, 32, 41, 0.9)),
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.35), rgba(28, 32, 41, 0.9)),
     var(--blue-dark);
   background-size: cover;
   background-position: center;
@@ -334,7 +334,7 @@ button:hover {
   overflow-x: auto;
   background: var(--black);
   scrollbar-width: thin;
-  scrollbar-color: rgba(236, 189, 41, 0.45) transparent;
+  scrollbar-color: rgba(var(--accent-rgb), 0.45) transparent;
 }
 
 .thumbs::-webkit-scrollbar {
@@ -346,12 +346,12 @@ button:hover {
 }
 
 .thumbs::-webkit-scrollbar-thumb {
-  background: rgba(236, 189, 41, 0.45);
+  background: rgba(var(--accent-rgb), 0.45);
   border-radius: 0;
 }
 
 .thumbs::-webkit-scrollbar-thumb:hover {
-  background: rgba(236, 189, 41, 0.7);
+  background: rgba(var(--accent-rgb), 0.7);
 }
 
 .thumb {
@@ -381,7 +381,7 @@ button:hover {
   overflow-y: auto;
   color: var(--black);
   scrollbar-width: thin;
-  scrollbar-color: rgba(236, 189, 41, 0.45) rgba(255, 255, 255, 0.04);
+  scrollbar-color: rgba(var(--accent-rgb), 0.45) rgba(255, 255, 255, 0.04);
 }
 
 .body::-webkit-scrollbar {
@@ -390,17 +390,17 @@ button:hover {
 
 .body::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.04);
-  border-left: 1px solid rgba(236, 189, 41, 0.12);
+  border-left: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .body::-webkit-scrollbar-thumb {
-  background: rgba(236, 189, 41, 0.45);
+  background: rgba(var(--accent-rgb), 0.45);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .body::-webkit-scrollbar-thumb:hover {
-  background: rgba(236, 189, 41, 0.7);
+  background: rgba(var(--accent-rgb), 0.7);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
@@ -572,15 +572,15 @@ dd.pending {
 .action-notice {
   margin: 0.35rem 0 0;
   padding: 0.65rem 0.75rem;
-  border: 1px solid rgba(236, 189, 41, 0.45);
-  background: rgba(236, 189, 41, 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
   color: #1a1a1a;
   font-size: 0.86rem;
   line-height: 1.35;
 }
 
 .action-notice.pending {
-  border-color: rgba(236, 189, 41, 0.7);
+  border-color: rgba(var(--accent-rgb), 0.7);
 }
 
 .actions {

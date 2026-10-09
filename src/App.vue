@@ -7,6 +7,7 @@ import GameShopSidebar from "./components/GameShopSidebar.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import { useGamepad } from "./composables/useGamepad.js";
 import { useLibrary } from "./composables/useLibrary.js";
+import { applyTheme } from "./theme.js";
 
 const {
   filteredGames,
@@ -46,10 +47,22 @@ function openSettings() {
   settingsOpen.value = true;
 }
 
-async function onSettingsSaved() {
-  notice.value = "Steam settings saved — refreshing library";
+async function onSettingsSaved(payload) {
+  applyTheme(payload?.theme);
+  notice.value = "Settings saved";
   await loadLibrary();
   ensureSelection();
+}
+
+async function loadTheme() {
+  try {
+    const response = await fetch("/api/settings");
+    if (!response.ok) return;
+    const payload = await response.json();
+    applyTheme(payload.theme);
+  } catch {
+    // Keep default theme if settings are unavailable.
+  }
 }
 
 function scrollToTop() {
@@ -276,6 +289,7 @@ onMounted(async () => {
   window.addEventListener("resize", measureColumns);
   window.addEventListener("scroll", onWindowScroll, { passive: true });
   onWindowScroll();
+  void loadTheme();
   void pollGameSession();
   sessionPollTimer = window.setInterval(() => {
     void pollGameSession();

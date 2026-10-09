@@ -1,7 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto+Condensed:ital,wght@0,400;0,700;1,400&display=swap');
 
-:root {
+:root,
+[data-theme='default'] {
   --gold: #ecbd29;
+  --accent-rgb: 236, 189, 41;
   --blue: #373b44;
   --blue-dark: #1c2029;
   --black: #121212;
@@ -9,6 +11,42 @@
   --white-alt: #f2f2f2;
   --gray: #ddd;
   --sidebar-width: 380px;
+}
+
+/* PS5-inspired: cool charcoal + electric blue */
+[data-theme='blue'] {
+  --gold: #0070eb;
+  --accent-rgb: 0, 112, 235;
+  --blue: #4a5568;
+  --blue-dark: #0b1220;
+  --black: #05070d;
+  --blue-alt: #07111f;
+  --white-alt: #f2f5f8;
+  --gray: #c5cdd8;
+}
+
+/* Xbox-inspired: near-black + guide green */
+[data-theme='green'] {
+  --gold: #107c10;
+  --accent-rgb: 16, 124, 16;
+  --blue: #2f3b32;
+  --blue-dark: #0c120e;
+  --black: #050805;
+  --blue-alt: #08110a;
+  --white-alt: #f2f5f2;
+  --gray: #c8d0c8;
+}
+
+/* Nintendo Switch-inspired: dark gray + neon red */
+[data-theme='red'] {
+  --gold: #e60012;
+  --accent-rgb: 230, 0, 18;
+  --blue: #3a3a3a;
+  --blue-dark: #141414;
+  --black: #0a0a0a;
+  --blue-alt: #1a0a0c;
+  --white-alt: #f5f2f2;
+  --gray: #d5d0d0;
 }
 
 * {
@@ -72,7 +110,7 @@ a {
   position: sticky;
   top: 0;
   z-index: 40;
-  border-bottom: 1px solid rgba(236, 189, 41, 0.25);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.25);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,7 +155,7 @@ a {
 
 .settings-btn {
   padding: 0.35rem 0.7rem;
-  border: 1px solid rgba(236, 189, 41, 0.45);
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
   background: transparent;
   color: var(--gold);
   font-size: 0.75rem;
@@ -129,7 +167,7 @@ a {
 
 .settings-btn:hover {
   border-color: var(--gold);
-  background: rgba(236, 189, 41, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .topbar-meta .status {
@@ -296,7 +334,7 @@ a {
   margin: 0 0 1rem;
   padding: 0.75rem 0;
   background: var(--blue-dark);
-  border-bottom: 1px solid rgba(236, 189, 41, 0.18);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.18);
 }
 
 .filters {

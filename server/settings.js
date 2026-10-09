@@ -2,11 +2,14 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+export const THEMES = ['default', 'blue', 'green', 'red']
+
 const DEFAULTS = {
   steamApiKey: '',
   steamId: '',
   launchOnStartup: false,
   keepOnTop: false,
+  theme: 'default',
 }
 
 function settingsDir() {
@@ -32,6 +35,11 @@ function asBool(value, fallback = false) {
   return fallback
 }
 
+function asTheme(value, fallback = DEFAULTS.theme) {
+  const theme = String(value || '').trim().toLowerCase()
+  return THEMES.includes(theme) ? theme : fallback
+}
+
 export function loadSettings() {
   const stored = readJson(settingsPath(), {})
   return {
@@ -39,6 +47,7 @@ export function loadSettings() {
     steamId: String(stored?.steamId || ''),
     launchOnStartup: asBool(stored?.launchOnStartup, DEFAULTS.launchOnStartup),
     keepOnTop: asBool(stored?.keepOnTop, DEFAULTS.keepOnTop),
+    theme: asTheme(stored?.theme, DEFAULTS.theme),
   }
 }
 
@@ -61,6 +70,10 @@ export function saveSettings(partial = {}) {
       partial.keepOnTop !== undefined
         ? asBool(partial.keepOnTop, current.keepOnTop)
         : current.keepOnTop,
+    theme:
+      partial.theme !== undefined
+        ? asTheme(partial.theme, current.theme)
+        : current.theme,
   }
 
   fs.mkdirSync(settingsDir(), { recursive: true })
@@ -102,12 +115,15 @@ export function getPublicSettings() {
     credentialSource: creds.apiKey || creds.steamId ? creds.source : 'none',
     launchOnStartup: settings.launchOnStartup,
     keepOnTop: settings.keepOnTop,
+    theme: settings.theme,
+    themes: THEMES,
     settingsPath: settingsPath(),
     hasLocalSettings: Boolean(
       settings.steamApiKey ||
         settings.steamId ||
         settings.launchOnStartup ||
-        settings.keepOnTop,
+        settings.keepOnTop ||
+        settings.theme !== DEFAULTS.theme,
     ),
     defaults: DEFAULTS,
   }

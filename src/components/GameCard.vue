@@ -52,15 +52,9 @@ watch(
 onMounted(() => probeCover(props.game));
 
 function coverStyle() {
-  if (coverUrl.value) {
-    return {
-      backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(18, 18, 18, 0.92)), url("${coverUrl.value}")`,
-    };
-  }
-
+  if (!coverUrl.value) return undefined;
   return {
-    backgroundImage:
-      "linear-gradient(145deg, rgba(236, 189, 41, 0.35), rgba(18, 18, 18, 0.95)), radial-gradient(circle at 20% 20%, rgba(55, 59, 68, 0.45), transparent 45%)",
+    backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(18, 18, 18, 0.92)), url("${coverUrl.value}")`,
   };
 }
 </script>
@@ -69,7 +63,7 @@ function coverStyle() {
   <button
     class="card"
     type="button"
-    :class="{ active, installed: game.installed }"
+    :class="{ active, installed: game.installed, 'no-cover': !coverUrl }"
     :style="coverStyle()"
     @click="$emit('select')"
   >
@@ -106,6 +100,20 @@ function coverStyle() {
     transform 180ms ease,
     border-color 180ms ease,
     box-shadow 180ms ease;
+}
+
+.card.no-cover {
+  background-image:
+    linear-gradient(
+      145deg,
+      rgba(var(--accent-rgb), 0.35),
+      rgba(18, 18, 18, 0.95)
+    ),
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(55, 59, 68, 0.45),
+      transparent 45%
+    );
 }
 
 .card:hover,
